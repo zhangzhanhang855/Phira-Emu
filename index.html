@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine - Hold Fixed</title>
+  <title>Phira Pure Engine - Fixed Geometry & Judging</title>
   <style>
     * {
       box-sizing: border-box;
@@ -70,7 +70,6 @@
       letter-spacing: 1px;
       margin-top: 4px;
     }
-    /* 导入遮罩层 */
     #upload-panel {
       position: absolute;
       top: 0;
@@ -150,8 +149,6 @@
     input[type="file"] {
       display: none;
     }
-
-    /* 结算面板样式 */
     #result-panel {
       position: absolute;
       top: 0;
@@ -258,7 +255,6 @@
       </div>
     </div>
 
-    <!-- 用户自定义音符大小调节滑块 -->
     <div class="slider-box">
       <span>音符大小 (Note Size):</span>
       <input type="range" id="size-slider" min="0.6" max="2.2" step="0.05" value="1.25">
@@ -269,7 +265,6 @@
     <button class="btn" id="start-btn" disabled>开始游玩</button>
   </div>
 
-  <!-- 结算界面 -->
   <div id="result-panel">
     <div class="result-card">
       <div class="result-rank" id="res-rank">V</div>
@@ -561,6 +556,7 @@
         const speedEvents = (line.speedEvents || []).map(e => {
           const startFloor = accumulatedFloor;
           const duration = e.endTime - e.startTime;
+          // 速度积分必须保留原正负号，但位移单位需严格按官方规范缩放
           const deltaFloor = (duration / 32) * (e.value / (bpm / 60));
           accumulatedFloor += deltaFloor;
           return {
@@ -665,6 +661,21 @@
       return { x: 0.5, y: 0.5 };
     }
 
+    // --- 核心修复：几何相对位移计算（彻底解决负流速导致音符上下颠倒）---
+    function computeNoteLocalY(note, curFloorPos, curSec) {
+      // 官方标准：floorDiff 的符号方向必须与时间流向方向一致
+      // 音符未到判定线 (curSec < note.timeSec) 时，notesAbove 必须在判定线上方 (Local Y > 0)
+      const rawFloorDiff = note.startFloor - curFloorPos;
+      const dt = note.timeSec - curSec;
+
+      // 距离模长由 floorDiff 决定，但法向朝向必须严格锁定
+      const dist = Math.abs(rawFloorDiff) * 380 * scale;
+      const sign = (dt >= 0) ? 1 : -1;
+
+      // 无论速度如何倒流，notesAbove 来向永远在上方（局部-Y方向），notesBelow 在下方（局部+Y方向）
+      return note.isAbove ? (-dist * sign) : (dist * sign);
+    }
+
     // --- 触控响应逻辑 ---
     const activeTouches = new Map();
 
@@ -703,7 +714,7 @@
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
 
-    // 瞬时打击判定 (Tap, Drag, Flick, Hold起始击打)
+    // 严谨判定逻辑（彻底修复 Drag 还没到线就被提前判定）
     function checkHits(screenX, screenY, inputType) {
       if (!isPlaying) return;
       const curTime = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
@@ -727,53 +738,61 @@
           if (note.hit || note.miss) return;
           const dt = curTime - note.timeSec;
 
-          const floorDiff = note.startFloor - curFloorPos;
-          const dist = floorDiff * 380 * scale;
-          const noteLocalY = note.isAbove ? -dist : dist;
+          // 核心：调用统一函数获取当前的真正相对位置
+          const noteLocalY = computeNoteLocalY(note, curFloorPos, curTime);
           const noteLocalX = (note.x / 9) * (W * 0.42);
 
-          const vertDist = Math.abs(touchLocalY - noteLocalY);
           const horizDist = Math.abs(touchLocalX - noteLocalX);
-
-          const vertThreshold = 110 * scale * userNoteScale;
           const horizThreshold = 120 * scale * userNoteScale;
 
-          if (horizDist < horizThreshold && vertDist < vertThreshold) {
+          // 核心修复 2：音符必须真正“贴近判定线”才能判定！
+          // 音符距离判定线的物理距离不能大于极近的范围（解决 Drag 还在半空中就被吸爆的问题）
+          const noteDistToLine = Math.abs(noteLocalY);
+          const isPhysicallyNearLine = noteDistToLine < (45 * scale * userNoteScale);
+
+          // 手指是否在判定线对应轨道的有效触碰区
+          const isTouchNearLine = Math.abs(touchLocalY) < (90 * scale * userNoteScale);
+
+          if (horizDist < horizThreshold && isPhysicallyNearLine && isTouchNearLine) {
             const hitWorldX = lx + noteLocalX * Math.cos(-rad);
             const hitWorldY = ly + noteLocalX * Math.sin(-rad);
 
+            // 1. Tap (敲击判定：时间窗口严格在 ±0.16s 内)
             if (note.type === 1 && inputType === 'tap' && Math.abs(dt) <= 0.16) {
               note.hit = true;
               playHitSound(1);
               const isPerf = Math.abs(dt) <= 0.08;
               registerHit(isPerf ? 1.0 : 0.65);
               spawnHitFX(hitWorldX, hitWorldY, isPerf);
-            } else if (note.type === 2 && Math.abs(dt) <= 0.18) {
+            }
+            // 2. Drag (滑动判定：必须已经到达判定线并且时间窗口贴合，杜绝提前早判)
+            else if (note.type === 2 && Math.abs(dt) <= 0.10) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
               spawnHitFX(hitWorldX, hitWorldY, true);
-            } else if (note.type === 4 && inputType === 'flick' && Math.abs(dt) <= 0.18) {
+            }
+            // 3. Flick (划击判定)
+            else if (note.type === 4 && inputType === 'flick' && Math.abs(dt) <= 0.16) {
               note.hit = true;
               playHitSound(4);
               registerHit(1.0);
               spawnHitFX(hitWorldX, hitWorldY, true);
-            } else if (note.type === 3) {
-              // Hold 头部触发：首次 Tap 击中
-              if (inputType === 'tap' && Math.abs(dt) <= 0.16 && !note.headHit) {
-                note.headHit = true;
-                note.holding = true;
-                note.lastTouchTime = curTime;
-                playHitSound(1);
-                spawnHitFX(hitWorldX, hitWorldY, true);
-              }
+            }
+            // 4. Hold 起始击打
+            else if (note.type === 3 && inputType === 'tap' && Math.abs(dt) <= 0.16 && !note.headHit) {
+              note.headHit = true;
+              note.holding = true;
+              note.lastTouchTime = curTime;
+              playHitSound(1);
+              spawnHitFX(hitWorldX, hitWorldY, true);
             }
           }
         });
       });
     }
 
-    // 逐帧主动轮询按压中的 Hold（彻底解决“手按着不动断触”的问题）
+    // 逐帧轮询长按 Hold
     function updateHoldingStates(curTime) {
       if (activeTouches.size === 0) return;
 
@@ -792,16 +811,14 @@
 
           const noteLocalX = (note.x / 9) * (W * 0.42);
           const horizThreshold = 140 * scale * userNoteScale;
-          const vertThreshold = 180 * scale * userNoteScale; // 长按中的贴线宽容度加大
+          const vertThreshold = 140 * scale * userNoteScale;
 
-          // 遍历屏幕上每一根手指
           for (let [id, touch] of activeTouches) {
             const dx = touch.x - lx;
             const dy = touch.y - ly;
             const tX = dx * Math.cos(rad) - dy * Math.sin(rad);
             const tY = dx * Math.sin(rad) + dy * Math.cos(rad);
 
-            // 手指只要在判定线附近的对应轨道按着
             if (Math.abs(tX - noteLocalX) < horizThreshold && Math.abs(tY) < vertThreshold) {
               note.holding = true;
               note.lastTouchTime = curTime;
@@ -878,7 +895,6 @@
       const now = performance.now();
       const curSec = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
 
-      // 每帧轮询长按音符手指按压
       updateHoldingStates(curSec);
 
       ctx.clearRect(0, 0, W, H);
@@ -915,6 +931,7 @@
         ctx.translate(lx, ly);
         ctx.rotate((rotDeg * Math.PI) / 180);
 
+        // 判定线无限延伸
         if (lineAlpha > 0.01) {
           ctx.save();
           ctx.globalAlpha = lineAlpha;
@@ -932,23 +949,21 @@
         line.notes.forEach(note => {
           if (note.hit) return;
 
-          // 普通音符超时判定
+          // 超时判定
           if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
             return;
           }
 
-          // Hold 音符生命周期逻辑
+          // Hold 判定与尾端完成
           if (note.type === 3) {
-            // 未按且超时未激活
             if (!note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
               note.miss = true;
               registerMiss();
               return;
             }
 
-            // 已激活：检测断触 (容错时间扩充到 0.28s)
             if (note.headHit && !note.miss) {
               if (curSec > note.lastTouchTime + 0.28 && curSec < note.timeSec + note.holdTimeSec) {
                 note.miss = true;
@@ -958,7 +973,6 @@
               }
             }
 
-            // Hold 尾部完成结算
             if (note.headHit && curSec >= note.timeSec + note.holdTimeSec) {
               note.hit = true;
               registerHit(1.0);
@@ -972,10 +986,8 @@
           const timeToHit = note.timeSec - curSec;
           if (timeToHit < -0.25 || timeToHit > 2.2) return;
 
-          // 核心落点与垂直对齐
-          const floorDiff = note.startFloor - curFloorPos;
-          const dist = floorDiff * 380 * scale;
-          const noteY = note.isAbove ? -dist : dist;
+          // 核心修复 1：严格基于方向修正的局部坐标
+          const noteY = computeNoteLocalY(note, curFloorPos, curSec);
           const noteX = (note.x / 9) * (W * 0.42);
 
           if (Math.abs(noteY) > H * 1.5) return;
@@ -1003,18 +1015,15 @@
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-nw / 2.2, -nh / 2.5, nw / 1.1, nh / 1.25);
             }
-          } else if (note.type === 3) { // Hold (彻底删除多余的 Tap 头部绘制)
-            let holdFloorSpan = Math.max(0.01, note.endFloor - note.startFloor);
-            // 实时修剪变短：被按住时推平到判定线上
+          } else if (note.type === 3) { // Hold (无缝推平修剪)
+            let holdFloorSpan = Math.abs(note.endFloor - note.startFloor);
             if (note.headHit) {
-              const remainingFloor = Math.max(0, note.endFloor - curFloorPos);
-              holdFloorSpan = remainingFloor;
+              holdFloorSpan = Math.max(0, Math.abs(note.endFloor - curFloorPos));
             }
-            const holdLen = holdFloorSpan * 380 * scale;
+            const holdLen = Math.max(0.01, holdFloorSpan * 380 * scale);
             const holdImg = isMh ? ASSETS.images['Hold_mh'] : ASSETS.images['Hold'];
 
             if (holdImg) {
-              // 直接以 Hold 贴图的头部对准 (0,0) 开始绘制，严禁额外绘制 Tap
               if (note.isAbove) ctx.drawImage(holdImg, -nw / 2, -holdLen, nw, holdLen);
               else ctx.drawImage(holdImg, -nw / 2, 0, nw, holdLen);
             } else {
