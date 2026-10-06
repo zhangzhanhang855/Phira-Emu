@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine - Fixed Drag & Hold</title>
+  <title>Phira Pure Engine - Fixed Geometry Orientation</title>
   <style>
     * {
       box-sizing: border-box;
@@ -131,20 +131,40 @@
       text-align: center;
       min-height: 20px;
     }
+    .setting-group {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
     .slider-box {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       background: rgba(255, 255, 255, 0.06);
-      padding: 10px 20px;
+      padding: 8px 18px;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      font-size: 14px;
+      font-size: 13px;
       color: #cfd8dc;
     }
     .slider-box input[type="range"] {
       cursor: pointer;
-      width: 140px;
+      width: 120px;
+    }
+    .toggle-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .toggle-btn.active {
+      background: #00e5ff;
+      color: #000;
+      font-weight: bold;
     }
     input[type="file"] {
       display: none;
@@ -239,7 +259,7 @@
       <div class="drop-zone" id="chart-drop">
         <h3 style="margin-bottom: 8px;">1. 导入谱面 ZIP (5文件)</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含：info.txt、info.yml、JSON、歌曲、曲绘[span_11](start_span)[span_11](end_span)[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span)
+          包含：info.txt、info.yml、JSON、歌曲、曲绘
         </p>
         <span id="chart-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择</span>
         <input type="file" id="chart-input" accept=".zip">
@@ -248,17 +268,23 @@
       <div class="drop-zone" id="skin-drop">
         <h3 style="margin-bottom: 8px;">2. 导入皮肤与音效 ZIP</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含：贴图及 _mh、hit_fx 爆弹序列图[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)、<br>音效与 ending.mp3[span_16](start_span)[span_16](end_span)
+          包含：贴图及 _mh、hit_fx 爆弹图、<br>音效与 ending.mp3
         </p>
         <span id="skin-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择 (可选)</span>
         <input type="file" id="skin-input" accept=".zip">
       </div>
     </div>
 
-    <div class="slider-box">
-      <span>音符基准大小 (Note Size):</span>
-      <input type="range" id="size-slider" min="0.6" max="2.2" step="0.05" value="1.25">
-      <span id="size-val" style="color:#00e5ff; font-weight:bold;">1.25x</span>
+    <div class="setting-group">
+      <div class="slider-box">
+        <span>Note 尺寸:</span>
+        <input type="range" id="size-slider" min="0.6" max="2.2" step="0.05" value="1.25">
+        <span id="size-val" style="color:#00e5ff; font-weight:bold;">1.25x</span>
+      </div>
+      <div class="slider-box">
+        <span>上下朝向翻转:</span>
+        <button class="toggle-btn" id="flip-btn">默认 (标准规范)</button>
+      </div>
     </div>
 
     <div id="status-text">请先导入谱面 ZIP 包</div>
@@ -297,11 +323,20 @@
     let isEnded = false;
 
     let userNoteScale = 1.25;
+    let flipOrientation = false; // 朝向翻转控制变量
+
     const sizeSlider = document.getElementById('size-slider');
     const sizeVal = document.getElementById('size-val');
     sizeSlider.oninput = (e) => {
       userNoteScale = parseFloat(e.target.value);
       sizeVal.innerText = userNoteScale.toFixed(2) + "x";
+    };
+
+    const flipBtn = document.getElementById('flip-btn');
+    flipBtn.onclick = () => {
+      flipOrientation = !flipOrientation;
+      flipBtn.classList.toggle('active', flipOrientation);
+      flipBtn.innerText = flipOrientation ? "已翻转 (Inverted)" : "默认 (标准规范)";
     };
 
     let songMeta = {
@@ -681,12 +716,15 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    // 核心物理距离映射：严格按 floorPosition 相对差值计算，杜绝正负号混乱倒错
+    // 核心物理映射：无任何人工正负号干预，原汁原味还原 Phira 判定线相对坐标
     function computeNoteLocalY(note, curFloorPos) {
-      const floorDiff = note.startFloor - curFloorPos;
+      const floorDiff = (note.startFloor - curFloorPos);
       const dist = floorDiff * 380 * scale;
-      // 官方标准：上方的音符随 floor 递减从负 Y（屏幕上方）落下；下方的音符从正 Y 落下
-      return note.isAbove ? -dist : dist;
+
+      // 默认标准：Canvas 中 -dist 代表屏幕上方，+dist 代表屏幕下方
+      let y = note.isAbove ? -dist : dist;
+      if (flipOrientation) y = -y;
+      return y;
     }
 
     // --- 触控引擎与打击判定 ---
@@ -777,7 +815,7 @@
               const isPerf = Math.abs(dt) <= 0.08;
               registerHit(isPerf ? 1.0 : 0.65);
               spawnHitFX(hitWorldX, hitWorldY, isPerf);
-            } else if (note.type === 2 && noteDistToLine < (60 * scale * userNoteScale) && Math.abs(dt) <= 0.10) {
+            } else if (note.type === 2 && noteDistToLine < (65 * scale * userNoteScale) && Math.abs(dt) <= 0.12) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
@@ -799,7 +837,6 @@
       }
     }
 
-    // 核心修复：Hold 持续按压跟踪（防止 0.5s 误退消失）
     function updateHoldingStates(curTime) {
       for (let l = 0; l < parsedLines.length; l++) {
         const line = parsedLines[l];
@@ -819,13 +856,10 @@
         for (let i = startIdx; i < notes.length; i++) {
           const note = notes[i];
           if (note.timeSec - curTime > 0.5) break;
-          // 仅关注已激活且生命周期内的 Hold
           if (note.type !== 3 || !note.headHit || note.hit || note.miss) continue;
 
-          // 核心修复：只要在长条持续时间内，绝对不报普通超时 Miss！
           if (curTime < note.timeSec) continue;
 
-          // 若长按时间已完整走完，顺利结算
           if (curTime >= note.timeSec + note.holdTimeSec) {
             note.hit = true;
             registerHit(1.0);
@@ -835,7 +869,7 @@
           }
 
           const noteLocalX = (note.x / 9) * (W * 0.42);
-          const horizThreshold = 160 * scale * userNoteScale; // 宽容按压范围
+          const horizThreshold = 160 * scale * userNoteScale;
           const vertThreshold = 160 * scale * userNoteScale;
 
           let isTouchCovering = false;
@@ -851,7 +885,6 @@
             }
           }
 
-          // 只要有触控覆盖，持续刷新状态与 HitFX
           if (isTouchCovering) {
             note.holding = true;
             note.lastTouchTime = curTime;
@@ -863,7 +896,6 @@
               spawnHitFX(hitWorldX, hitWorldY, true);
             }
           } else {
-            // 断触容错：超过 0.35 秒真正未检测到触点才判断连
             if (curTime - note.lastTouchTime > 0.35) {
               note.holding = false;
               note.miss = true;
@@ -1012,14 +1044,12 @@
           const note = notes[i];
           if (note.hit) continue;
 
-          // 普通音符超时判定 (Hold 绝不进入此处)
           if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
             continue;
           }
 
-          // 未击打 Hold 超时判定
           if (note.type === 3 && !note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
@@ -1030,7 +1060,7 @@
           if (timeToHit > 2.0) break;
           if (timeToHit < -0.25 && note.type !== 3) continue;
 
-          // 核心计算局部 Y：严格一致，不倒立
+          // 核心计算局部 Y
           const noteY = computeNoteLocalY(note, curFloorPos);
           const noteX = (note.x / 9) * (W * 0.42);
 
@@ -1064,21 +1094,23 @@
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-baseWidth / 2.2, -h / 2, baseWidth / 1.1, h);
             }
-          } else if (note.type === 3) { // Hold (修剪推进)
+          } else if (note.type === 3) { // Hold (锁定向来向延伸)
             let holdFloorSpan = Math.abs(note.endFloor - note.startFloor);
-            // 实时修剪推进：按压中身体向判定线缩进
             if (note.headHit) {
               holdFloorSpan = Math.max(0, Math.abs(note.endFloor - curFloorPos));
             }
             const holdLen = Math.max(0.01, holdFloorSpan * 380 * scale);
             const holdImg = isMh ? ASSETS.images['Hold_mh'] : ASSETS.images['Hold'];
 
+            // 保持尾端朝向来向延伸（绝不过线穿模）
+            const isGoingUp = (note.isAbove !== flipOrientation);
+
             if (holdImg) {
-              if (note.isAbove) ctx.drawImage(holdImg, -baseWidth / 2, -holdLen, baseWidth, holdLen);
+              if (isGoingUp) ctx.drawImage(holdImg, -baseWidth / 2, -holdLen, baseWidth, holdLen);
               else ctx.drawImage(holdImg, -baseWidth / 2, 0, baseWidth, holdLen);
             } else {
               ctx.fillStyle = isMh ? 'rgba(255, 235, 59, 0.45)' : 'rgba(3, 169, 244, 0.4)';
-              if (note.isAbove) ctx.fillRect(-baseWidth / 2, -holdLen, baseWidth, holdLen);
+              if (isGoingUp) ctx.fillRect(-baseWidth / 2, -holdLen, baseWidth, holdLen);
               else ctx.fillRect(-baseWidth / 2, 0, baseWidth, holdLen);
             }
 
