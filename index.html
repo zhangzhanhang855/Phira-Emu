@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine</title>
+  <title>Phira Pure Engine - Zip Loader</title>
   <style>
     * {
       box-sizing: border-box;
@@ -46,7 +46,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 20px 28px;
+      padding: 18px 26px;
       z-index: 10;
     }
     .hud-top {
@@ -76,57 +76,65 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(8, 8, 12, 0.94);
+      background: rgba(6, 6, 10, 0.95);
       backdrop-filter: blur(16px);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 30;
-      gap: 18px;
+      gap: 16px;
+    }
+    .upload-card-group {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 90%;
+      max-width: 800px;
     }
     .drop-zone {
-      width: 380px;
-      max-width: 90%;
-      padding: 30px 20px;
-      border: 2px dashed #00c6ff;
+      flex: 1 1 320px;
+      min-width: 280px;
+      padding: 24px 16px;
+      border: 2px dashed #304ffe;
       border-radius: 16px;
       text-align: center;
-      background: rgba(0, 198, 255, 0.05);
+      background: rgba(48, 79, 254, 0.06);
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    .drop-zone:hover {
-      background: rgba(0, 198, 255, 0.12);
+    .drop-zone.ready {
+      border-color: #00e676;
+      background: rgba(0, 230, 118, 0.08);
     }
     .btn {
-      padding: 12px 40px;
-      background: linear-gradient(135deg, #1e69ff, #00c6ff);
+      padding: 14px 50px;
+      background: linear-gradient(135deg, #2979ff, #00e5ff);
       border: none;
-      border-radius: 28px;
+      border-radius: 30px;
       color: #fff;
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 18px rgba(0, 198, 255, 0.35);
+      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.35);
     }
     .btn:disabled {
-      background: #444;
+      background: #333;
       box-shadow: none;
       cursor: not-allowed;
+      color: #777;
     }
     #status-text {
-      font-size: 14px;
-      color: #8fa3b0;
-      max-width: 80%;
+      font-size: 13px;
+      color: #90a4ae;
       text-align: center;
-      line-height: 1.5;
+      min-height: 20px;
     }
-    #file-input {
+    input[type="file"] {
       display: none;
     }
   </style>
-  <!-- 离线/CDN 双重兼容的极简 JSZip，解压资源包 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
@@ -137,8 +145,8 @@
   <div id="ui-overlay">
     <div class="hud-top">
       <div>
-        <div id="ui-song-name" style="font-weight: bold; font-size: 17px;">未载入曲目</div>
-        <div id="ui-song-info" style="opacity: 0.65; font-size: 13px;">请导入 .zip 格式谱面包</div>
+        <div id="song-name" style="font-weight: bold; font-size: 18px;">Cryogenic</div>
+        <div id="song-desc" style="opacity: 0.7; font-size: 13px;">等待载入...</div>
       </div>
       <div class="hud-combo">
         <div id="combo-num">0</div>
@@ -146,19 +154,38 @@
       </div>
       <div style="text-align: right;">
         <div id="score-val" style="font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums;">0000000</div>
-        <div id="acc-val" style="opacity: 0.65; font-size: 13px;">100.00%</div>
+        <div id="acc-val" style="opacity: 0.7; font-size: 13px;">100.00%</div>
       </div>
     </div>
   </div>
 
   <div id="upload-panel">
-    <h1 style="letter-spacing: 5px; font-weight: 300; font-size: 28px;">PHIRA ZIP LOADER</h1>
-    <div class="drop-zone" id="drop-box">
-      <p style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">点击或拖拽选择 .ZIP 资源包</p>
-      <p style="font-size: 12px; opacity: 0.7;">支持 Phira/Phigros 完整包（包含 json, 音频, 皮肤, 打击音效）</p>
-      <input type="file" id="file-input" accept=".zip">
+    <h1 style="letter-spacing: 5px; font-weight: 300; font-size: 28px;">PHIRA DUAL-ZIP LOADER</h1>
+    <div class="upload-card-group">
+      <!-- 谱面 ZIP 导入框 (5 个文件) -->
+      <div class="drop-zone" id="chart-drop">
+        <h3 style="margin-bottom: 8px;">1. 导入谱面 ZIP</h3>
+        <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
+          包含 5 个文件：<br>
+          info.txt / info.yml / JSON / 音频 / 曲绘
+        </p>
+        <span id="chart-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择</span>
+        <input type="file" id="chart-input" accept=".zip">
+      </div>
+
+      <!-- 皮肤/音效 ZIP 导入框 -->
+      <div class="drop-zone" id="skin-drop">
+        <h3 style="margin-bottom: 8px;">2. 导入皮肤与音效 ZIP</h3>
+        <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
+          包含音符皮肤贴图及 _mh 多押、<br>
+          Tap/Drag/Hold/Flick 音效与 ending.mp3
+        </p>
+        <span id="skin-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择 (可选，不选使用原生)</span>
+        <input type="file" id="skin-input" accept=".zip">
+      </div>
     </div>
-    <div id="status-text">等待导入...</div>
+
+    <div id="status-text">请先导入谱面 ZIP 包</div>
     <button class="btn" id="start-btn" disabled>开始游玩</button>
   </div>
 
@@ -172,11 +199,19 @@
     let startTime = 0;
     let isPlaying = false;
 
-    // 资源存储库 (全由 ZIP 动态读入)
+    // 存储谱面元数据
+    let songMeta = {
+      title: "Cryogenic",
+      level: "IN Lv.15",
+      composer: "Camellia ft. Petra Gurin",
+      charter: "「HD」 Falsus",
+      offset: 0.0
+    };
+
     const ASSETS = {
-      chart: null,
+      chartJson: null,
       bgImage: null,
-      audioBuffers: {}, // Tap, Drag, Hold, Flick, ending
+      audioBuffers: {}, // Tap, Drag, Hold, Flick
       images: {}        // Tap, Tap_mh, Drag, Drag_mh, Hold, Hold_mh, Flick, Flick_mh
     };
 
@@ -204,19 +239,18 @@
       if (audioCtx.state === 'suspended') await audioCtx.resume();
     }
 
-    // 播放打击音效（优先播放 ZIP 提供的音效，备用自带合成）
     function playHitSound(type) {
       if (!audioCtx) return;
-      const soundKeys = { 1: "Tap", 2: "Drag", 3: "Hold", 4: "Flick" };
-      const key = soundKeys[type];
-      if (ASSETS.audioBuffers[key]) {
+      const map = { 1: "Tap", 2: "Drag", 3: "Hold", 4: "Flick" };
+      const name = map[type];
+      if (ASSETS.audioBuffers[name]) {
         const s = audioCtx.createBufferSource();
-        s.buffer = ASSETS.audioBuffers[key];
+        s.buffer = ASSETS.audioBuffers[name];
         s.connect(audioCtx.destination);
         s.start(0);
         return;
       }
-      // 备用纯音合成器
+      // 备用高精度合成音
       try {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -250,105 +284,158 @@
       } catch (e) {}
     }
 
-    // --- ZIP 资源包解压与解析引擎 ---
-    const dropBox = document.getElementById('drop-box');
-    const fileInput = document.getElementById('file-input');
+    // --- 极简 YAML / TXT 键值对提取器 ---
+    function parseInfoString(str) {
+      const res = {};
+      const lines = str.split(/\r?\n/);
+      lines.forEach(l => {
+        const idx = l.indexOf(':');
+        if (idx > -1) {
+          const k = l.slice(0, idx).trim().replace(/^#\s*/, '');
+          let v = l.slice(idx + 1).trim();
+          v = v.replace(/^["']|["']$/g, '');
+          if (k) res[k] = v;
+        }
+      });
+      return res;
+    }
+
+    // --- 1. 谱面 ZIP 解析 (包含 2 个 info、json、音频、曲绘共 5 个文件) ---
+    const chartDrop = document.getElementById('chart-drop');
+    const chartInput = document.getElementById('chart-input');
+    const skinDrop = document.getElementById('skin-drop');
+    const skinInput = document.getElementById('skin-input');
     const statusText = document.getElementById('status-text');
     const startBtn = document.getElementById('start-btn');
 
-    dropBox.onclick = () => fileInput.click();
-    dropBox.ondragover = (e) => { e.preventDefault(); };
-    dropBox.ondrop = (e) => {
-      e.preventDefault();
-      if (e.dataTransfer.files[0]) handleZipFile(e.dataTransfer.files[0]);
-    };
-    fileInput.onchange = (e) => {
-      if (e.target.files[0]) handleZipFile(e.target.files[0]);
-    };
+    chartDrop.onclick = () => chartInput.click();
+    skinDrop.onclick = () => skinInput.click();
 
-    async function handleZipFile(file) {
+    chartInput.onchange = (e) => { if (e.target.files[0]) handleChartZip(e.target.files[0]); };
+    skinInput.onchange = (e) => { if (e.target.files[0]) handleSkinZip(e.target.files[0]); };
+
+    async function handleChartZip(file) {
       await initAudio();
-      statusText.innerText = "正在解压并读取资源包...";
+      statusText.innerText = "正在读取谱面 ZIP 包...";
       try {
         const zip = await JSZip.loadAsync(file);
-        let chartFile = null;
-        let musicFile = null;
-        let bgFile = null;
+        let infoData = {};
+        const entries = zip.files;
 
-        // 1. 遍历解压资源
-        for (let path in zip.files) {
-          const entry = zip.files[path];
+        // 优先搜寻两个 info 文件提取文件名映射
+        for (let path in entries) {
+          const l = path.toLowerCase();
+          if (l.endsWith('info.yml') || l.endsWith('info.yaml') || l.endsWith('info.txt')) {
+            const txt = await entries[path].async('text');
+            infoData = Object.assign(infoData, parseInfoString(txt));
+          }
+        }
+
+        if (infoData.name) songMeta.title = infoData.name;
+        if (infoData.level) songMeta.level = infoData.level;
+        if (infoData.composer) songMeta.composer = infoData.composer;
+        if (infoData.charter) songMeta.charter = infoData.charter;
+        if (infoData.offset !== undefined) songMeta.offset = parseFloat(infoData.offset) || 0;
+
+        document.getElementById('song-name').innerText = songMeta.title;
+        document.getElementById('song-desc').innerText = `${songMeta.level} | ${songMeta.composer}`;
+
+        // 寻找谱面 JSON、BGM 音频、曲绘 PNG
+        for (let path in entries) {
+          const entry = entries[path];
           if (entry.dir) continue;
-          const lower = path.toLowerCase();
+          const l = path.toLowerCase();
 
-          if (lower.endsWith('.json')) {
+          // JSON 判定
+          if (l.endsWith('.json')) {
             const txt = await entry.async('text');
-            try {
-              const j = JSON.parse(txt);
-              if (j.judgeLineList) {
-                chartFile = j;
-                statusText.innerText = `已载入谱面: ${path}`;
-              }
-            } catch (err) {}
-          } else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+            const j = JSON.parse(txt);
+            if (j.judgeLineList) ASSETS.chartJson = j;
+          }
+          // 音频判定 (OGG/MP3/WAV)
+          else if (l.endsWith('.ogg') || l.endsWith('.mp3') || l.endsWith('.wav')) {
+            const ab = await entry.async('arraybuffer');
+            bgmBuffer = await audioCtx.decodeAudioData(ab);
+          }
+          // 背景图判定
+          else if (l.endsWith('.png') || l.endsWith('.jpg') || l.endsWith('.jpeg')) {
             const blob = await entry.async('blob');
             const img = new Image();
             img.src = URL.createObjectURL(blob);
             await new Promise(r => { img.onload = r; });
-            
-            // 判断是否是音符贴图
-            if (lower.includes('tap') || lower.includes('click')) {
-              ASSETS.images[lower.includes('mh') ? 'Tap_mh' : 'Tap'] = img;
-            } else if (lower.includes('drag')) {
-              ASSETS.images[lower.includes('mh') ? 'Drag_mh' : 'Drag'] = img;
-            } else if (lower.includes('hold')) {
-              ASSETS.images[lower.includes('mh') ? 'Hold_mh' : 'Hold'] = img;
-            } else if (lower.includes('flick')) {
-              ASSETS.images[lower.includes('mh') ? 'Flick_mh' : 'Flick'] = img;
-            } else {
-              // 默认较大图片视为背景曲绘
-              if (!bgFile || img.width > 500) {
-                bgFile = img;
-                ASSETS.bgImage = img;
-              }
-            }
-          } else if (lower.endsWith('.ogg') || lower.endsWith('.mp3') || lower.endsWith('.wav')) {
-            const ab = await entry.async('arraybuffer');
-            const buf = await audioCtx.decodeAudioData(ab);
-            
-            // 归类打击音效与主曲、结算曲
-            if (lower.includes('tap') || lower.includes('click')) ASSETS.audioBuffers['Tap'] = buf;
-            else if (lower.includes('drag')) ASSETS.audioBuffers['Drag'] = buf;
-            else if (lower.includes('hold')) ASSETS.audioBuffers['Hold'] = buf;
-            else if (lower.includes('flick')) ASSETS.audioBuffers['Flick'] = buf;
-            else if (lower.includes('ending')) endingBuffer = buf;
-            else {
-              // 较长音轨视为主背景音乐
-              if (!bgmBuffer || buf.duration > 30) {
-                bgmBuffer = buf;
-              }
-            }
+            ASSETS.bgImage = img;
           }
         }
 
-        if (!chartFile) throw new Error("ZIP 中未检测到合法的 Phira/Phigros 谱面 JSON 文件！");
-        ASSETS.chart = chartFile;
+        if (!ASSETS.chartJson) throw new Error("未在谱面 ZIP 中找到合法的 judgeLineList JSON 谱面！");
+        if (!bgmBuffer) throw new Error("未在谱面 ZIP 中找到有效的歌曲音频文件！");
 
-        statusText.innerText = "资源解析成功，随时可以开始！";
+        chartDrop.classList.add('ready');
+        document.getElementById('chart-file-name').innerText = `已载入: ${file.name}`;
+        statusText.innerText = "谱面 ZIP 加载完成！可直接开始或导入皮肤/音效 ZIP。";
         startBtn.disabled = false;
       } catch (err) {
-        statusText.innerText = `解析失败: ${err.message}`;
+        statusText.innerText = `谱面读取失败: ${err.message}`;
       }
     }
 
-    // --- 多押检测与物理判定线构建 ---
+    // --- 2. 皮肤与打击音效 ZIP 解析 ---
+    async function handleSkinZip(file) {
+      await initAudio();
+      statusText.innerText = "正在解压皮肤与音效 ZIP 包...";
+      try {
+        const zip = await JSZip.loadAsync(file);
+        for (let path in zip.files) {
+          const entry = zip.files[path];
+          if (entry.dir) continue;
+          const l = path.toLowerCase();
+
+          // 音符皮肤与多押高光 (_mh)
+          if (l.endsWith('.png') || l.endsWith('.jpg')) {
+            const blob = await entry.async('blob');
+            const img = new Image();
+            img.src = URL.createObjectURL(blob);
+            await new Promise(r => { img.onload = r; });
+
+            if (l.includes('tap') || l.includes('click')) {
+              ASSETS.images[l.includes('mh') ? 'Tap_mh' : 'Tap'] = img;
+            } else if (l.includes('drag')) {
+              ASSETS.images[l.includes('mh') ? 'Drag_mh' : 'Drag'] = img;
+            } else if (l.includes('hold')) {
+              ASSETS.images[l.includes('mh') ? 'Hold_mh' : 'Hold'] = img;
+            } else if (l.includes('flick')) {
+              ASSETS.images[l.includes('mh') ? 'Flick_mh' : 'Flick'] = img;
+            }
+          }
+          // 打击音效与结算音频
+          else if (l.endsWith('.ogg') || l.endsWith('.wav') || l.endsWith('.mp3')) {
+            const ab = await entry.async('arraybuffer');
+            const buf = await audioCtx.decodeAudioData(ab);
+
+            if (l.includes('tap') || l.includes('click')) ASSETS.audioBuffers['Tap'] = buf;
+            else if (l.includes('drag')) ASSETS.audioBuffers['Drag'] = buf;
+            else if (l.includes('hold')) ASSETS.audioBuffers['Hold'] = buf;
+            else if (l.includes('flick')) ASSETS.audioBuffers['Flick'] = buf;
+            else if (l.includes('ending')) endingBuffer = buf;
+          }
+        }
+
+        skinDrop.classList.add('ready');
+        document.getElementById('skin-file-name').innerText = `已载入: ${file.name}`;
+        statusText.innerText = "皮肤与音效包解压装配完成！";
+      } catch (err) {
+        statusText.innerText = `皮肤包读取异常: ${err.message}`;
+      }
+    }
+
+    // --- 严谨谱面预处理与积分表 ---
     function prepareChart() {
-      if (!ASSETS.chart || !ASSETS.chart.judgeLineList) return;
+      if (!ASSETS.chartJson || !ASSETS.chartJson.judgeLineList) return;
       totalNotes = 0;
 
-      // 统计全局所有音符的时间戳，出现 >= 2 次的时间标为多押
+      // 多押统计
       const timeCount = new Map();
-      ASSETS.chart.judgeLineList.forEach(line => {
+      ASSETS.chartJson.judgeLineList.forEach(line => {
         const allNotes = [...(line.notesAbove || []), ...(line.notesBelow || [])];
         allNotes.forEach(n => {
           const t = Math.round(n.time);
@@ -356,7 +443,7 @@
         });
       });
 
-      parsedLines = ASSETS.chart.judgeLineList.map((line, idx) => {
+      parsedLines = ASSETS.chartJson.judgeLineList.map((line, idx) => {
         const bpm = line.bpm || 140.0;
         const tickToSec = (tick) => (tick / 32) * (60 / bpm);
         const secToTick = (sec) => (sec / (60 / bpm)) * 32;
@@ -365,7 +452,6 @@
         const speedEvents = (line.speedEvents || []).map(e => {
           const startFloor = accumulatedFloor;
           const duration = e.endTime - e.startTime;
-          // 官方规范换算
           const deltaFloor = (duration / 32) * (e.value / (bpm / 60));
           accumulatedFloor += deltaFloor;
           return {
@@ -469,7 +555,7 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    // --- 触控判定核心（彻底解决 Flick, Drag, Hold）---
+    // --- 触控响应逻辑 ---
     const activeTouches = new Map();
 
     window.addEventListener('pointerdown', (e) => {
@@ -479,8 +565,7 @@
         y: e.clientY,
         lastX: e.clientX,
         lastY: e.clientY,
-        startTime: performance.now(),
-        flicked: false
+        startTime: performance.now()
       });
       checkHits(e.clientX, e.clientY, 'tap');
     }, { passive: false });
@@ -492,31 +577,25 @@
         const dx = e.clientX - p.lastX;
         const dy = e.clientY - p.lastY;
         const dist = Math.hypot(dx, dy);
-
-        // 检测 Flick 划动速度
         const isFlick = dist > 14;
+
         p.lastX = e.clientX;
         p.lastY = e.clientY;
         p.x = e.clientX;
         p.y = e.clientY;
 
-        if (isFlick) {
-          checkHits(e.clientX, e.clientY, 'flick');
-        }
-        // 持续检测 Drag 与 Hold 按压
+        if (isFlick) checkHits(e.clientX, e.clientY, 'flick');
         checkHits(e.clientX, e.clientY, 'drag');
       }
     }, { passive: false });
 
-    function onPointerUp(e) {
-      activeTouches.delete(e.pointerId);
-    }
+    function onPointerUp(e) { activeTouches.delete(e.pointerId); }
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
 
     function checkHits(screenX, screenY, inputType) {
       if (!isPlaying) return;
-      const curTime = (audioCtx.currentTime - startTime) + (ASSETS.chart.offset || 0);
+      const curTime = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
 
       parsedLines.forEach(line => {
         const curTick = line.secToTick(curTime);
@@ -537,30 +616,29 @@
           const dt = curTime - note.timeSec;
           const noteLocalX = (note.x / 9) * (W * 0.42);
 
-          // 宽容判定区域
-          const inX = Math.abs(localX - noteLocalX) < (120 * scale);
-          const inY = Math.abs(localY) < (140 * scale);
+          const inX = Math.abs(localX - noteLocalX) < (110 * scale);
+          const inY = Math.abs(localY) < (130 * scale);
 
           if (inX && inY) {
-            // 1. TAP 判定
+            // Tap 判定
             if (note.type === 1 && inputType === 'tap' && Math.abs(dt) <= 0.16) {
               note.hit = true;
               playHitSound(1);
               registerHit(Math.abs(dt) <= 0.08 ? 1.0 : 0.65);
             }
-            // 2. DRAG 判定 (只要有手指在有效时间内划过/碰触即可击碎)
+            // Drag 判定 (触摸经过即爆)
             else if (note.type === 2 && Math.abs(dt) <= 0.18) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
             }
-            // 3. FLICK 判定 (必须带滑动矢量)
+            // Flick 判定 (滑动加速度检测)
             else if (note.type === 4 && inputType === 'flick' && Math.abs(dt) <= 0.18) {
               note.hit = true;
               playHitSound(4);
               registerHit(1.0);
             }
-            // 4. HOLD 判定 (Tap 激活头部，中途持续保持判定)
+            // Hold 判定
             else if (note.type === 3) {
               if (inputType === 'tap' && Math.abs(dt) <= 0.16 && !note.headHit) {
                 note.headHit = true;
@@ -602,10 +680,10 @@
     function render() {
       if (!isPlaying) return;
 
-      const curSec = (audioCtx.currentTime - startTime) + (ASSETS.chart.offset || 0);
+      const curSec = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
       ctx.clearRect(0, 0, W, H);
 
-      // 1. 背景绘制
+      // 1. 曲绘自适应居中暗化
       if (ASSETS.bgImage) {
         ctx.save();
         ctx.globalAlpha = 0.35;
@@ -637,7 +715,7 @@
         ctx.translate(lx, ly);
         ctx.rotate((rotDeg * Math.PI) / 180);
 
-        // 核心修复 1: 判定线无限延伸（贯穿全屏）
+        // 判定线无限延伸（贯穿全屏）
         if (lineAlpha > 0.01) {
           ctx.save();
           ctx.globalAlpha = lineAlpha;
@@ -656,25 +734,25 @@
         line.notes.forEach(note => {
           if (note.hit) return;
 
-          // 超时判定
+          // 超时 Miss
           if (curSec - note.timeSec > 0.18 && !note.hit && !note.miss) {
             note.miss = true;
             registerMiss();
             return;
           }
 
-          // Hold 结算
+          // Hold 结束结算
           if (note.type === 3 && note.headHit && curSec >= note.timeSec + note.holdTimeSec) {
             note.hit = true;
             registerHit(1.0);
             return;
           }
 
-          // 时间窗剪裁
+          // 时间窗口拦截：防止音符提前挤爆屏幕
           const timeToHit = note.timeSec - curSec;
           if (timeToHit < -0.25 || timeToHit > 2.2) return;
 
-          // 核心修复 2: 严格对齐判定线（击打时刻 dist 严格为 0）
+          // 核心压线对准：落差 dist 在击打瞬间严格为 0
           const floorDiff = note.startFloor - curFloorPos;
           const dist = floorDiff * 380 * scale;
           const noteY = note.isAbove ? -dist : dist;
@@ -687,8 +765,6 @@
 
           const nw = 110 * scale;
           const nh = 16 * scale;
-
-          // 贴图选择 (具备多押 _mh 自动切换)
           const isMh = note.isMulti;
 
           if (note.type === 1) { // Tap
@@ -709,7 +785,7 @@
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-nw / 2.2, -nh / 2.5, nw / 1.1, nh / 1.25);
             }
-          } else if (note.type === 3) { // Hold (贴图长条与头尾)
+          } else if (note.type === 3) { // Hold
             const floorSpan = Math.max(0.01, note.endFloor - note.startFloor);
             const holdLen = floorSpan * 380 * scale;
             const holdImg = isMh ? ASSETS.images['Hold_mh'] : ASSETS.images['Hold'];
@@ -729,7 +805,7 @@
               }
             }
 
-            // 头部基准
+            // 头部打击线
             const headImg = isMh ? ASSETS.images['Tap_mh'] : ASSETS.images['Tap'];
             if (headImg) {
               ctx.drawImage(headImg, -nw / 2, -nh / 2, nw, nh);
@@ -755,8 +831,8 @@
         ctx.restore();
       });
 
-      // 检查曲目结束 -> 播放 ending
-      if (bgmBuffer && curSec > bgmBuffer.duration + 1.0) {
+      // 自动播放 ending 结算音频
+      if (bgmBuffer && curSec > bgmBuffer.duration + 0.8) {
         isPlaying = false;
         if (endingBuffer) {
           const endSrc = audioCtx.createBufferSource();
@@ -769,9 +845,8 @@
       requestAnimationFrame(render);
     }
 
-    // --- 开始游玩 ---
     startBtn.onclick = () => {
-      if (!ASSETS.chart) return;
+      if (!ASSETS.chartJson) return;
       prepareChart();
       document.getElementById('upload-panel').style.display = 'none';
       isPlaying = true;
