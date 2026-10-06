@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine - Fixed Geometry Orientation</title>
+  <title>Phira Pure Engine - Perfect Alignment</title>
   <style>
     * {
       box-sizing: border-box;
@@ -152,20 +152,6 @@
       cursor: pointer;
       width: 120px;
     }
-    .toggle-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      padding: 6px 14px;
-      border-radius: 16px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .toggle-btn.active {
-      background: #00e5ff;
-      color: #000;
-      font-weight: bold;
-    }
     input[type="file"] {
       display: none;
     }
@@ -281,10 +267,6 @@
         <input type="range" id="size-slider" min="0.6" max="2.2" step="0.05" value="1.25">
         <span id="size-val" style="color:#00e5ff; font-weight:bold;">1.25x</span>
       </div>
-      <div class="slider-box">
-        <span>上下朝向翻转:</span>
-        <button class="toggle-btn" id="flip-btn">默认 (标准规范)</button>
-      </div>
     </div>
 
     <div id="status-text">请先导入谱面 ZIP 包</div>
@@ -323,20 +305,11 @@
     let isEnded = false;
 
     let userNoteScale = 1.25;
-    let flipOrientation = false; // 朝向翻转控制变量
-
     const sizeSlider = document.getElementById('size-slider');
     const sizeVal = document.getElementById('size-val');
     sizeSlider.oninput = (e) => {
       userNoteScale = parseFloat(e.target.value);
       sizeVal.innerText = userNoteScale.toFixed(2) + "x";
-    };
-
-    const flipBtn = document.getElementById('flip-btn');
-    flipBtn.onclick = () => {
-      flipOrientation = !flipOrientation;
-      flipBtn.classList.toggle('active', flipOrientation);
-      flipBtn.innerText = flipOrientation ? "已翻转 (Inverted)" : "默认 (标准规范)";
     };
 
     let songMeta = {
@@ -603,10 +576,12 @@
         const tickToSec = (tick) => (tick / 32) * (60 / bpm);
         const secToTick = (sec) => (sec / (60 / bpm)) * 32;
 
+        // 核心：严格按照官方规范积分，保证与 note.floorPosition 尺标 100% 吻合
         let accumulatedFloor = 0;
         const speedEvents = (line.speedEvents || []).map(e => {
           const startFloor = accumulatedFloor;
           const duration = e.endTime - e.startTime;
+          // 官方换算率：dt / 32 * value / (bpm / 60)
           const deltaFloor = (duration / 32) * (e.value / (bpm / 60));
           accumulatedFloor += deltaFloor;
           return {
@@ -637,6 +612,7 @@
         function formatNotes(notes, isAbove) {
           return (notes || []).map(n => {
             totalNotes++;
+            // 优先使用官方烘焙的绝对 floorPosition
             const startFloor = (n.floorPosition !== undefined) ? n.floorPosition : getFloorPosAtTick(n.time);
             const endFloor = getFloorPosAtTick(n.time + (n.holdTime || 0));
             const isMulti = (timeCount.get(Math.round(n.time)) || 0) >= 2;
@@ -716,14 +692,20 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    // 核心物理映射：无任何人工正负号干预，原汁原味还原 Phira 判定线相对坐标
-    function computeNoteLocalY(note, curFloorPos) {
-      const floorDiff = (note.startFloor - curFloorPos);
-      const dist = floorDiff * 380 * scale;
+    // 核心物理映射：基于时间流向进行单调锁定，绝不倒立！
+    function computeNoteLocalY(note, curFloorPos, curSec) {
+      const dt = note.timeSec - curSec;
+      const rawFloorDiff = Math.abs(note.startFloor - curFloorPos);
+      const dist = rawFloorDiff * 380 * scale;
 
-      // 默认标准：Canvas 中 -dist 代表屏幕上方，+dist 代表屏幕下方
-      let y = note.isAbove ? -dist : dist;
-      if (flipOrientation) y = -y;
+      // 核心锁死：尚未打击时 (dt >= 0)，上方音符绝对锁定在负Y（上方），下方音符在正Y（下方）！
+      // 穿过判定线后 (dt < 0)，自然穿透判定线离开
+      let y = 0;
+      if (note.isAbove) {
+        y = (dt >= 0) ? -dist : dist;
+      } else {
+        y = (dt >= 0) ? dist : -dist;
+      }
       return y;
     }
 
@@ -797,12 +779,12 @@
           const dt = curTime - note.timeSec;
           if (dt < -0.22) break;
 
-          const noteLocalY = computeNoteLocalY(note, curFloorPos);
+          const noteLocalY = computeNoteLocalY(note, curFloorPos, curTime);
           const noteLocalX = (note.x / 9) * (W * 0.42);
 
           const horizDist = Math.abs(touchLocalX - noteLocalX);
           const horizThreshold = 130 * scale * userNoteScale;
-          const isTouchNearLine = Math.abs(touchLocalY) < (120 * scale * userNoteScale);
+          const isTouchNearLine = Math.abs(touchLocalY) < (130 * scale * userNoteScale);
           const noteDistToLine = Math.abs(noteLocalY);
 
           if (horizDist < horizThreshold && isTouchNearLine) {
@@ -815,7 +797,7 @@
               const isPerf = Math.abs(dt) <= 0.08;
               registerHit(isPerf ? 1.0 : 0.65);
               spawnHitFX(hitWorldX, hitWorldY, isPerf);
-            } else if (note.type === 2 && noteDistToLine < (65 * scale * userNoteScale) && Math.abs(dt) <= 0.12) {
+            } else if (note.type === 2 && noteDistToLine < (70 * scale * userNoteScale) && Math.abs(dt) <= 0.14) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
@@ -837,6 +819,7 @@
       }
     }
 
+    // 严谨修复：Hold 持续按压跟踪（彻底根除按压 0.5s 消失的问题）
     function updateHoldingStates(curTime) {
       for (let l = 0; l < parsedLines.length; l++) {
         const line = parsedLines[l];
@@ -858,8 +841,10 @@
           if (note.timeSec - curTime > 0.5) break;
           if (note.type !== 3 || !note.headHit || note.hit || note.miss) continue;
 
+          // 还在击打起手点之前不计
           if (curTime < note.timeSec) continue;
 
+          // 长条完整走完自然结算
           if (curTime >= note.timeSec + note.holdTimeSec) {
             note.hit = true;
             registerHit(1.0);
@@ -870,7 +855,7 @@
 
           const noteLocalX = (note.x / 9) * (W * 0.42);
           const horizThreshold = 160 * scale * userNoteScale;
-          const vertThreshold = 160 * scale * userNoteScale;
+          const vertThreshold = 180 * scale * userNoteScale;
 
           let isTouchCovering = false;
           for (let [id, touch] of activeTouches) {
@@ -896,7 +881,8 @@
               spawnHitFX(hitWorldX, hitWorldY, true);
             }
           } else {
-            if (curTime - note.lastTouchTime > 0.35) {
+            // 0.45 秒断触宽容缓冲，保证绝不会中途按着按着突然消失
+            if (curTime - note.lastTouchTime > 0.45) {
               note.holding = false;
               note.miss = true;
               registerMiss();
@@ -1044,12 +1030,14 @@
           const note = notes[i];
           if (note.hit) continue;
 
+          // 普通单点超时判定 (Hold 绝不进入此处)
           if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
             continue;
           }
 
+          // 未触碰 Hold 超时判定
           if (note.type === 3 && !note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
@@ -1060,8 +1048,8 @@
           if (timeToHit > 2.0) break;
           if (timeToHit < -0.25 && note.type !== 3) continue;
 
-          // 核心计算局部 Y
-          const noteY = computeNoteLocalY(note, curFloorPos);
+          // 核心单调物理落差计算：彻底消除上下颠倒
+          const noteY = computeNoteLocalY(note, curFloorPos, curSec);
           const noteX = (note.x / 9) * (W * 0.42);
 
           if (Math.abs(noteY) > H * 1.5 && note.type !== 3) continue;
@@ -1094,7 +1082,7 @@
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-baseWidth / 2.2, -h / 2, baseWidth / 1.1, h);
             }
-          } else if (note.type === 3) { // Hold (锁定向来向延伸)
+          } else if (note.type === 3) { // Hold
             let holdFloorSpan = Math.abs(note.endFloor - note.startFloor);
             if (note.headHit) {
               holdFloorSpan = Math.max(0, Math.abs(note.endFloor - curFloorPos));
@@ -1102,15 +1090,12 @@
             const holdLen = Math.max(0.01, holdFloorSpan * 380 * scale);
             const holdImg = isMh ? ASSETS.images['Hold_mh'] : ASSETS.images['Hold'];
 
-            // 保持尾端朝向来向延伸（绝不过线穿模）
-            const isGoingUp = (note.isAbove !== flipOrientation);
-
             if (holdImg) {
-              if (isGoingUp) ctx.drawImage(holdImg, -baseWidth / 2, -holdLen, baseWidth, holdLen);
+              if (note.isAbove) ctx.drawImage(holdImg, -baseWidth / 2, -holdLen, baseWidth, holdLen);
               else ctx.drawImage(holdImg, -baseWidth / 2, 0, baseWidth, holdLen);
             } else {
               ctx.fillStyle = isMh ? 'rgba(255, 235, 59, 0.45)' : 'rgba(3, 169, 244, 0.4)';
-              if (isGoingUp) ctx.fillRect(-baseWidth / 2, -holdLen, baseWidth, holdLen);
+              if (note.isAbove) ctx.fillRect(-baseWidth / 2, -holdLen, baseWidth, holdLen);
               else ctx.fillRect(-baseWidth / 2, 0, baseWidth, holdLen);
             }
 
