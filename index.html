@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine - Zip Loader</title>
+  <title>Phira Full Engine - Dual Zip Edition</title>
   <style>
     * {
       box-sizing: border-box;
@@ -70,6 +70,7 @@
       letter-spacing: 1px;
       margin-top: 4px;
     }
+    /* 导入遮罩层 */
     #upload-panel {
       position: absolute;
       top: 0;
@@ -134,6 +135,67 @@
     input[type="file"] {
       display: none;
     }
+
+    /* 结算面板样式 */
+    #result-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(4, 6, 12, 0.94);
+      backdrop-filter: blur(20px);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 40;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    .result-card {
+      width: 90%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: row;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      gap: 30px;
+      align-items: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+    .result-rank {
+      font-size: 90px;
+      font-weight: 900;
+      color: #ffd700;
+      text-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+      width: 140px;
+      text-align: center;
+    }
+    .result-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .result-score {
+      font-size: 40px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .result-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      font-size: 14px;
+      color: #b0bec5;
+    }
+    .stat-val {
+      font-weight: bold;
+      color: #fff;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -160,33 +222,48 @@
   </div>
 
   <div id="upload-panel">
-    <h1 style="letter-spacing: 5px; font-weight: 300; font-size: 28px;">PHIRA DUAL-ZIP LOADER</h1>
+    <h1 style="letter-spacing: 5px; font-weight: 300; font-size: 28px;">PHIRA ZIP ENGINE</h1>
     <div class="upload-card-group">
-      <!-- 谱面 ZIP 导入框 (5 个文件) -->
       <div class="drop-zone" id="chart-drop">
-        <h3 style="margin-bottom: 8px;">1. 导入谱面 ZIP</h3>
+        <h3 style="margin-bottom: 8px;">1. 导入谱面 ZIP (5文件)</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含 5 个文件：<br>
-          info.txt / info.yml / JSON / 音频 / 曲绘
+          包含：info.txt、info.yml、JSON、歌曲、曲绘
         </p>
         <span id="chart-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择</span>
         <input type="file" id="chart-input" accept=".zip">
       </div>
 
-      <!-- 皮肤/音效 ZIP 导入框 -->
       <div class="drop-zone" id="skin-drop">
         <h3 style="margin-bottom: 8px;">2. 导入皮肤与音效 ZIP</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含音符皮肤贴图及 _mh 多押、<br>
-          Tap/Drag/Hold/Flick 音效与 ending.mp3
+          包含：贴图及 _mh、打击特效 hitFx、<br>音效与 ending.mp3
         </p>
-        <span id="skin-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择 (可选，不选使用原生)</span>
+        <span id="skin-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择 (可选)</span>
         <input type="file" id="skin-input" accept=".zip">
       </div>
     </div>
 
     <div id="status-text">请先导入谱面 ZIP 包</div>
     <button class="btn" id="start-btn" disabled>开始游玩</button>
+  </div>
+
+  <!-- 结算界面 -->
+  <div id="result-panel">
+    <div class="result-card">
+      <div class="result-rank" id="res-rank">V</div>
+      <div class="result-info">
+        <div id="res-title" style="font-size: 20px; font-weight: 700;">Cryogenic</div>
+        <div class="result-score" id="res-score">0982540</div>
+        <div class="result-stats">
+          <div>ACC: <span class="stat-val" id="res-acc">98.25%</span></div>
+          <div>Max Combo: <span class="stat-val" id="res-combo">620</span></div>
+          <div>Perfect: <span class="stat-val" style="color:#00e5ff;" id="res-perf">580</span></div>
+          <div>Good: <span class="stat-val" style="color:#ffd54f;" id="res-good">20</span></div>
+          <div>Miss: <span class="stat-val" style="color:#ff1744;" id="res-miss">5</span></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn" style="margin-top: 24px;" onclick="location.reload()">重新载入</button>
   </div>
 
   <script>
@@ -198,8 +275,8 @@
     let bgmSource = null;
     let startTime = 0;
     let isPlaying = false;
+    let isEnded = false;
 
-    // 存储谱面元数据
     let songMeta = {
       title: "Cryogenic",
       level: "IN Lv.15",
@@ -211,13 +288,18 @@
     const ASSETS = {
       chartJson: null,
       bgImage: null,
-      audioBuffers: {}, // Tap, Drag, Hold, Flick
-      images: {}        // Tap, Tap_mh, Drag, Drag_mh, Hold, Hold_mh, Flick, Flick_mh
+      hitFxImage: null, // 打击特效序列图
+      audioBuffers: {},
+      images: {}
     };
 
     let parsedLines = [];
-    let score = 0, combo = 0, perfectCount = 0, goodCount = 0, missCount = 0, totalNotes = 0;
+    let score = 0, combo = 0, maxCombo = 0;
+    let perfectCount = 0, goodCount = 0, missCount = 0, totalNotes = 0;
     let W = 0, H = 0, scale = 1;
+
+    // 活跃打击特效粒子列表
+    const hitParticles = [];
 
     function resize() {
       W = window.innerWidth;
@@ -250,7 +332,6 @@
         s.start(0);
         return;
       }
-      // 备用高精度合成音
       try {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -284,7 +365,17 @@
       } catch (e) {}
     }
 
-    // --- 极简 YAML / TXT 键值对提取器 ---
+    // 生成打击序列帧粒子
+    function spawnHitFX(x, y, isPerfect) {
+      hitParticles.push({
+        x: x,
+        y: y,
+        startTime: performance.now(),
+        duration: 350, // 350ms 走完 30 帧
+        isPerfect: isPerfect
+      });
+    }
+
     function parseInfoString(str) {
       const res = {};
       const lines = str.split(/\r?\n/);
@@ -300,7 +391,7 @@
       return res;
     }
 
-    // --- 1. 谱面 ZIP 解析 (包含 2 个 info、json、音频、曲绘共 5 个文件) ---
+    // --- ZIP 导入处理 ---
     const chartDrop = document.getElementById('chart-drop');
     const chartInput = document.getElementById('chart-input');
     const skinDrop = document.getElementById('skin-drop');
@@ -316,13 +407,12 @@
 
     async function handleChartZip(file) {
       await initAudio();
-      statusText.innerText = "正在读取谱面 ZIP 包...";
+      statusText.innerText = "正在读取谱面 ZIP 包 (包含 5 文件)...";
       try {
         const zip = await JSZip.loadAsync(file);
         let infoData = {};
         const entries = zip.files;
 
-        // 优先搜寻两个 info 文件提取文件名映射
         for (let path in entries) {
           const l = path.toLowerCase();
           if (l.endsWith('info.yml') || l.endsWith('info.yaml') || l.endsWith('info.txt')) {
@@ -340,25 +430,19 @@
         document.getElementById('song-name').innerText = songMeta.title;
         document.getElementById('song-desc').innerText = `${songMeta.level} | ${songMeta.composer}`;
 
-        // 寻找谱面 JSON、BGM 音频、曲绘 PNG
         for (let path in entries) {
           const entry = entries[path];
           if (entry.dir) continue;
           const l = path.toLowerCase();
 
-          // JSON 判定
           if (l.endsWith('.json')) {
             const txt = await entry.async('text');
             const j = JSON.parse(txt);
             if (j.judgeLineList) ASSETS.chartJson = j;
-          }
-          // 音频判定 (OGG/MP3/WAV)
-          else if (l.endsWith('.ogg') || l.endsWith('.mp3') || l.endsWith('.wav')) {
+          } else if (l.endsWith('.ogg') || l.endsWith('.mp3') || l.endsWith('.wav')) {
             const ab = await entry.async('arraybuffer');
             bgmBuffer = await audioCtx.decodeAudioData(ab);
-          }
-          // 背景图判定
-          else if (l.endsWith('.png') || l.endsWith('.jpg') || l.endsWith('.jpeg')) {
+          } else if (l.endsWith('.png') || l.endsWith('.jpg') || l.endsWith('.jpeg')) {
             const blob = await entry.async('blob');
             const img = new Image();
             img.src = URL.createObjectURL(blob);
@@ -368,7 +452,7 @@
         }
 
         if (!ASSETS.chartJson) throw new Error("未在谱面 ZIP 中找到合法的 judgeLineList JSON 谱面！");
-        if (!bgmBuffer) throw new Error("未在谱面 ZIP 中找到有效的歌曲音频文件！");
+        if (!bgmBuffer) throw new Error("未在谱面 ZIP 中找到歌曲音频！");
 
         chartDrop.classList.add('ready');
         document.getElementById('chart-file-name').innerText = `已载入: ${file.name}`;
@@ -379,7 +463,6 @@
       }
     }
 
-    // --- 2. 皮肤与打击音效 ZIP 解析 ---
     async function handleSkinZip(file) {
       await initAudio();
       statusText.innerText = "正在解压皮肤与音效 ZIP 包...";
@@ -390,14 +473,15 @@
           if (entry.dir) continue;
           const l = path.toLowerCase();
 
-          // 音符皮肤与多押高光 (_mh)
           if (l.endsWith('.png') || l.endsWith('.jpg')) {
             const blob = await entry.async('blob');
             const img = new Image();
             img.src = URL.createObjectURL(blob);
             await new Promise(r => { img.onload = r; });
 
-            if (l.includes('tap') || l.includes('click')) {
+            if (l.includes('hitfx') || l.includes('effect') || l.includes('atlas')) {
+              ASSETS.hitFxImage = img;
+            } else if (l.includes('tap') || l.includes('click')) {
               ASSETS.images[l.includes('mh') ? 'Tap_mh' : 'Tap'] = img;
             } else if (l.includes('drag')) {
               ASSETS.images[l.includes('mh') ? 'Drag_mh' : 'Drag'] = img;
@@ -406,9 +490,7 @@
             } else if (l.includes('flick')) {
               ASSETS.images[l.includes('mh') ? 'Flick_mh' : 'Flick'] = img;
             }
-          }
-          // 打击音效与结算音频
-          else if (l.endsWith('.ogg') || l.endsWith('.wav') || l.endsWith('.mp3')) {
+          } else if (l.endsWith('.ogg') || l.endsWith('.wav') || l.endsWith('.mp3')) {
             const ab = await entry.async('arraybuffer');
             const buf = await audioCtx.decodeAudioData(ab);
 
@@ -428,12 +510,11 @@
       }
     }
 
-    // --- 严谨谱面预处理与积分表 ---
+    // --- 严谨预处理与积分表 ---
     function prepareChart() {
       if (!ASSETS.chartJson || !ASSETS.chartJson.judgeLineList) return;
       totalNotes = 0;
 
-      // 多押统计
       const timeCount = new Map();
       ASSETS.chartJson.judgeLineList.forEach(line => {
         const allNotes = [...(line.notesAbove || []), ...(line.notesBelow || [])];
@@ -501,7 +582,8 @@
               hit: false,
               miss: false,
               holding: false,
-              headHit: false
+              headHit: false,
+              lastTouchTime: 0
             };
           });
         }
@@ -555,7 +637,7 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    // --- 触控响应逻辑 ---
+    // --- 触控判定逻辑 (修复 Hold 判定与断触) ---
     const activeTouches = new Map();
 
     window.addEventListener('pointerdown', (e) => {
@@ -616,36 +698,43 @@
           const dt = curTime - note.timeSec;
           const noteLocalX = (note.x / 9) * (W * 0.42);
 
-          const inX = Math.abs(localX - noteLocalX) < (110 * scale);
-          const inY = Math.abs(localY) < (130 * scale);
+          const inX = Math.abs(localX - noteLocalX) < (120 * scale);
+          const inY = Math.abs(localY) < (140 * scale);
 
           if (inX && inY) {
-            // Tap 判定
+            // Tap
             if (note.type === 1 && inputType === 'tap' && Math.abs(dt) <= 0.16) {
               note.hit = true;
               playHitSound(1);
-              registerHit(Math.abs(dt) <= 0.08 ? 1.0 : 0.65);
+              const isPerf = Math.abs(dt) <= 0.08;
+              registerHit(isPerf ? 1.0 : 0.65);
+              spawnHitFX(screenX, screenY, isPerf);
             }
-            // Drag 判定 (触摸经过即爆)
+            // Drag
             else if (note.type === 2 && Math.abs(dt) <= 0.18) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
+              spawnHitFX(screenX, screenY, true);
             }
-            // Flick 判定 (滑动加速度检测)
+            // Flick
             else if (note.type === 4 && inputType === 'flick' && Math.abs(dt) <= 0.18) {
               note.hit = true;
               playHitSound(4);
               registerHit(1.0);
+              spawnHitFX(screenX, screenY, true);
             }
-            // Hold 判定
+            // Hold 头部触发与持续保持
             else if (note.type === 3) {
               if (inputType === 'tap' && Math.abs(dt) <= 0.16 && !note.headHit) {
                 note.headHit = true;
                 note.holding = true;
+                note.lastTouchTime = curTime;
                 playHitSound(1);
-              } else if (note.headHit && curTime >= note.timeSec && curTime <= note.timeSec + note.holdTimeSec) {
+                spawnHitFX(screenX, screenY, true);
+              } else if (note.headHit) {
                 note.holding = true;
+                note.lastTouchTime = curTime;
               }
             }
           }
@@ -657,6 +746,7 @@
       if (weight === 1.0) perfectCount++;
       else goodCount++;
       combo++;
+      if (combo > maxCombo) maxCombo = combo;
       updateHUD();
     }
 
@@ -676,14 +766,52 @@
       document.getElementById('acc-val').innerText = acc.toFixed(2) + '%';
     }
 
+    // --- 绘制 HitFX 打击特效序列图 (5x6 = 30帧) ---
+    function renderHitFX(now) {
+      for (let i = hitParticles.length - 1; i >= 0; i--) {
+        const p = hitParticles[i];
+        const elapsed = now - p.startTime;
+        if (elapsed >= p.duration) {
+          hitParticles.splice(i, 1);
+          continue;
+        }
+
+        const progress = elapsed / p.duration;
+        const frameIndex = Math.min(29, Math.floor(progress * 30));
+        const col = frameIndex % 5;
+        const row = Math.floor(frameIndex / 5);
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+
+        if (ASSETS.hitFxImage) {
+          const img = ASSETS.hitFxImage;
+          const fw = img.width / 5;
+          const fh = img.height / 6;
+          const renderSize = 130 * scale;
+
+          ctx.drawImage(img, col * fw, row * fh, fw, fh, -renderSize / 2, -renderSize / 2, renderSize, renderSize);
+        } else {
+          // 备用纯代码发光环
+          ctx.strokeStyle = p.isPerfect ? '#ffe082' : '#80deea';
+          ctx.lineWidth = 3 * (1 - progress);
+          ctx.beginPath();
+          ctx.arc(0, 0, (30 + progress * 40) * scale, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
     // --- 主渲染管线 ---
     function render() {
       if (!isPlaying) return;
 
+      const now = performance.now();
       const curSec = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
       ctx.clearRect(0, 0, W, H);
 
-      // 1. 曲绘自适应居中暗化
+      // 1. 背景绘制
       if (ASSETS.bgImage) {
         ctx.save();
         ctx.globalAlpha = 0.35;
@@ -715,7 +843,7 @@
         ctx.translate(lx, ly);
         ctx.rotate((rotDeg * Math.PI) / 180);
 
-        // 判定线无限延伸（贯穿全屏）
+        // 判定线无限延伸
         if (lineAlpha > 0.01) {
           ctx.save();
           ctx.globalAlpha = lineAlpha;
@@ -734,25 +862,47 @@
         line.notes.forEach(note => {
           if (note.hit) return;
 
-          // 超时 Miss
-          if (curSec - note.timeSec > 0.18 && !note.hit && !note.miss) {
+          // 普通音符超时判定
+          if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
             return;
           }
 
-          // Hold 结束结算
-          if (note.type === 3 && note.headHit && curSec >= note.timeSec + note.holdTimeSec) {
-            note.hit = true;
-            registerHit(1.0);
-            return;
+          // Hold 判定逻辑与尾部截断
+          if (note.type === 3) {
+            // 未按且超时未激活
+            if (!note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
+              note.miss = true;
+              registerMiss();
+              return;
+            }
+
+            // 已激活：检测断触（容错 0.22s）
+            if (note.headHit && !note.miss) {
+              if (curSec > note.lastTouchTime + 0.22 && curSec < note.timeSec + note.holdTimeSec) {
+                note.miss = true;
+                note.holding = false;
+                registerMiss();
+                return;
+              }
+            }
+
+            // Hold 自然完成
+            if (note.headHit && curSec >= note.timeSec + note.holdTimeSec) {
+              note.hit = true;
+              registerHit(1.0);
+              const noteX = (note.x / 9) * (W * 0.42);
+              spawnHitFX(lx + noteX * Math.cos(rotDeg * Math.PI / 180), ly + noteX * Math.sin(rotDeg * Math.PI / 180), true);
+              return;
+            }
           }
 
-          // 时间窗口拦截：防止音符提前挤爆屏幕
+          // 时间窗口拦截
           const timeToHit = note.timeSec - curSec;
           if (timeToHit < -0.25 || timeToHit > 2.2) return;
 
-          // 核心压线对准：落差 dist 在击打瞬间严格为 0
+          // 核心：基于实时 floorPosition 贴线对齐
           const floorDiff = note.startFloor - curFloorPos;
           const dist = floorDiff * 380 * scale;
           const noteY = note.isAbove ? -dist : dist;
@@ -769,9 +919,8 @@
 
           if (note.type === 1) { // Tap
             const img = isMh ? ASSETS.images['Tap_mh'] : ASSETS.images['Tap'];
-            if (img) {
-              ctx.drawImage(img, -nw / 2, -nh / 2, nw, nh);
-            } else {
+            if (img) ctx.drawImage(img, -nw / 2, -nh / 2, nw, nh);
+            else {
               ctx.fillStyle = isMh ? '#ffeb3b' : '#03a9f4';
               ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
               ctx.strokeStyle = '#fff';
@@ -779,45 +928,43 @@
             }
           } else if (note.type === 2) { // Drag
             const img = isMh ? ASSETS.images['Drag_mh'] : ASSETS.images['Drag'];
-            if (img) {
-              ctx.drawImage(img, -nw / 2, -nh / 2, nw, nh);
-            } else {
+            if (img) ctx.drawImage(img, -nw / 2, -nh / 2, nw, nh);
+            else {
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-nw / 2.2, -nh / 2.5, nw / 1.1, nh / 1.25);
             }
-          } else if (note.type === 3) { // Hold
-            const floorSpan = Math.max(0.01, note.endFloor - note.startFloor);
-            const holdLen = floorSpan * 380 * scale;
+          } else if (note.type === 3) { // Hold (身体实时截断，头部紧贴判定线)
+            let holdFloorSpan = Math.max(0.01, note.endFloor - note.startFloor);
+            // 如果已经被击中并在按压，按压掉的部分自动削去
+            if (note.headHit) {
+              const remainingFloor = Math.max(0, note.endFloor - curFloorPos);
+              holdFloorSpan = remainingFloor;
+            }
+            const holdLen = holdFloorSpan * 380 * scale;
             const holdImg = isMh ? ASSETS.images['Hold_mh'] : ASSETS.images['Hold'];
 
             if (holdImg) {
-              if (note.isAbove) {
-                ctx.drawImage(holdImg, -nw / 2, -holdLen, nw, holdLen);
-              } else {
-                ctx.drawImage(holdImg, -nw / 2, 0, nw, holdLen);
-              }
+              if (note.isAbove) ctx.drawImage(holdImg, -nw / 2, -holdLen, nw, holdLen);
+              else ctx.drawImage(holdImg, -nw / 2, 0, nw, holdLen);
             } else {
               ctx.fillStyle = isMh ? 'rgba(255, 235, 59, 0.4)' : 'rgba(3, 169, 244, 0.35)';
-              if (note.isAbove) {
-                ctx.fillRect(-nw / 2, -holdLen, nw, holdLen);
-              } else {
-                ctx.fillRect(-nw / 2, 0, nw, holdLen);
-              }
+              if (note.isAbove) ctx.fillRect(-nw / 2, -holdLen, nw, holdLen);
+              else ctx.fillRect(-nw / 2, 0, nw, holdLen);
             }
 
             // 头部打击线
-            const headImg = isMh ? ASSETS.images['Tap_mh'] : ASSETS.images['Tap'];
-            if (headImg) {
-              ctx.drawImage(headImg, -nw / 2, -nh / 2, nw, nh);
-            } else {
-              ctx.fillStyle = isMh ? '#ffeb3b' : '#03a9f4';
-              ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
+            if (!note.headHit) {
+              const headImg = isMh ? ASSETS.images['Tap_mh'] : ASSETS.images['Tap'];
+              if (headImg) ctx.drawImage(headImg, -nw / 2, -nh / 2, nw, nh);
+              else {
+                ctx.fillStyle = isMh ? '#ffeb3b' : '#03a9f4';
+                ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
+              }
             }
           } else if (note.type === 4) { // Flick
             const img = isMh ? ASSETS.images['Flick_mh'] : ASSETS.images['Flick'];
-            if (img) {
-              ctx.drawImage(img, -nw / 2, -nh / 2, nw, nh);
-            } else {
+            if (img) ctx.drawImage(img, -nw / 2, -nh / 2, nw, nh);
+            else {
               ctx.fillStyle = '#ff1744';
               ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
               ctx.fillStyle = '#fff';
@@ -831,18 +978,58 @@
         ctx.restore();
       });
 
-      // 自动播放 ending 结算音频
-      if (bgmBuffer && curSec > bgmBuffer.duration + 0.8) {
-        isPlaying = false;
-        if (endingBuffer) {
-          const endSrc = audioCtx.createBufferSource();
-          endSrc.buffer = endingBuffer;
-          endSrc.connect(audioCtx.destination);
-          endSrc.start(0);
-        }
+      // 3. 渲染打击爆弹序列帧粒子 (最顶层)
+      renderHitFX(now);
+
+      // 4. 曲目结束 -> 展示评级结算画面
+      if (bgmBuffer && curSec > bgmBuffer.duration + 0.8 && !isEnded) {
+        isEnded = true;
+        showResult();
       }
 
       requestAnimationFrame(render);
+    }
+
+    // --- 结算画面展示 ---
+    function showResult() {
+      isPlaying = false;
+      if (endingBuffer) {
+        const endSrc = audioCtx.createBufferSource();
+        endSrc.buffer = endingBuffer;
+        endSrc.connect(audioCtx.destination);
+        endSrc.start(0);
+      }
+
+      const processed = perfectCount + goodCount + missCount;
+      const totalScore = processed === 0 ? 0 : Math.round(((perfectCount + goodCount * 0.65) / totalNotes) * 1000000);
+      const acc = processed === 0 ? 100 : (((perfectCount + goodCount * 0.65) / processed) * 100);
+
+      // 计算评级
+      let rank = "F";
+      let rankColor = "#f44336";
+      if (totalScore === 1000000) { rank = "φ"; rankColor = "#00e5ff"; }
+      else if (totalScore >= 960000) { rank = "V"; rankColor = "#ffd700"; }
+      else if (totalScore >= 920000) { rank = "S"; rankColor = "#ffb300"; }
+      else if (totalScore >= 880000) { rank = "A"; rankColor = "#4caf50"; }
+      else if (totalScore >= 820000) { rank = "B"; rankColor = "#29b6f6"; }
+      else if (totalScore >= 700000) { rank = "C"; rankColor = "#ab47bc"; }
+
+      const rankElem = document.getElementById('res-rank');
+      rankElem.innerText = rank;
+      rankElem.style.color = rankColor;
+      rankElem.style.textShadow = `0 0 25px ${rankColor}`;
+
+      document.getElementById('res-title').innerText = songMeta.title;
+      document.getElementById('res-score').innerText = totalScore.toString().padStart(7, '0');
+      document.getElementById('res-acc').innerText = acc.toFixed(2) + '%';
+      document.getElementById('res-combo').innerText = maxCombo;
+      document.getElementById('res-perf').innerText = perfectCount;
+      document.getElementById('res-good').innerText = goodCount;
+      document.getElementById('res-miss').innerText = missCount;
+
+      const p = document.getElementById('result-panel');
+      p.style.display = 'flex';
+      setTimeout(() => { p.style.opacity = '1'; }, 50);
     }
 
     startBtn.onclick = () => {
