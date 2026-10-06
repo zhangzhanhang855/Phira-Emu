@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Phira Web Player - Cryogenic</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      display: block;
+      background: #050508;
+      touch-action: none;
+    }
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px 24px;
+    }
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 14px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    .hud-combo {
+      text-align: center;
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+    .hud-combo span {
+      font-size: 14px;
+      font-weight: normal;
+      display: block;
+      opacity: 0.8;
+    }
+    #start-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      gap: 16px;
+    }
+    .btn {
+      padding: 12px 36px;
+      background: #2575fc;
+      border: none;
+      border-radius: 28px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+      transition: transform 0.1s ease;
+    }
+    .btn:active {
+      transform: scale(0.96);
+    }
+    .file-input-group {
+      font-size: 12px;
+      color: #aaa;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <div id="ui-overlay">
+    <div class="hud-top">
+      <div>
+        <div id="song-title" style="font-weight: bold; font-size: 16px;">Cryogenic</div>
+        <div id="song-detail" style="opacity: 0.7;">IN Lv.15 | Camellia ft. Petra Gurin</div>
+      </div>
+      <div class="hud-combo">
+        <div id="combo-num">0</div>
+        <span>COMBO</span>
+      </div>
+      <div style="text-align: right;">
+        <div id="score-val" style="font-size: 20px; font-weight: bold;">0000000</div>
+        <div id="acc-val" style="opacity: 0.7;">100.00%</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="start-panel">
+    <h1 style="letter-spacing: 4px; font-weight: 300;">PHIRA PLAYER</h1>
+    <p style="color: #bbb; font-size: 14px;">Cryogenic [IN Lv.15]</p>
+    <button class="btn" id="start-btn">开始游玩</button>
+    <div class="file-input-group">
+      <span>若离线 WebView 拦截本地 fetch，请直接选择包内文件：</span>
+      <input type="file" id="manual-files" multiple accept=".json,.ogg,.mp3,.png">
+    </div>
+  </div>
+
+  <script>
+    // --- 默认内嵌配置 ---
+    const CONFIG = {
+      chartFile: "2879060597059264.json",
+      audioFile: "2879060597059264.ogg",
+      bgFile: "2879060597059264.png",
+      offset: 0.0,
+      baseBPM: 145.0
+    };
+
+    let canvas = document.getElementById('gameCanvas');
+    let ctx = canvas.getContext('2d');
+    let audioCtx = null;
+    let audioBuffer = null;
+    let audioSource = null;
+    let startTime = 0;
+    let isPlaying = false;
+
+    let chartData = null;
+    let bgImg = new Image();
+    let bgLoaded = false;
+
+    let score = 0;
+    let combo = 0;
+    let perfectCount = 0;
+    let goodCount = 0;
+    let missCount = 0;
+    let totalNotes = 0;
+
+    // 屏幕适配基准 (根据官方标准 16:9 或类似比例设计)
+    let W = 0, H = 0, scale = 1;
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      scale = Math.min(W / 1920, H / 1080);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- 音频上下文与文件预载 ---
+    async function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+    }
+
+    async function tryAutoLoad() {
+      try {
+        const [chartRes, audioRes] = await Promise.all([
+          fetch(CONFIG.chartFile).then(r => r.json()),
+          fetch(CONFIG.audioFile).then(r => r.arrayBuffer())
+        ]);
+        chartData = chartRes;
+        await initAudio();
+        audioBuffer = await audioCtx.decodeAudioData(audioRes);
+        bgImg.src = CONFIG.bgFile;
+        bgImg.onload = () => { bgLoaded = true; };
+      } catch (e) {
+        console.warn("自动 fetch 同目录资源受限，可使用文件选择框直接装载:", e);
+      }
+    }
+    tryAutoLoad();
+
+    // 手动导入文件支持（针对严格本地沙盒环境）
+    document.getElementById('manual-files').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      await initAudio();
+      for (let f of files) {
+        if (f.name.endsWith('.json')) {
+          const txt = await f.text();
+          chartData = JSON.parse(txt);
+        } else if (f.name.endsWith('.ogg') || f.name.endsWith('.mp3')) {
+          const buf = await f.arrayBuffer();
+          audioBuffer = await audioCtx.decodeAudioData(buf);
+        } else if (f.name.endsWith('.png') || f.name.endsWith('.jpg')) {
+          const url = URL.createObjectURL(f);
+          bgImg.src = url;
+          bgImg.onload = () => { bgLoaded = true; };
+        }
+      }
+    });
+
+    // --- 谱面数据解析 ---
+    let parsedLines = [];
+
+    function prepareChart() {
+      if (!chartData || !chartData.judgeLineList) return;
+      totalNotes = 0;
+      parsedLines = chartData.judgeLineList.map((line, idx) => {
+        const bpm = line.bpm || CONFIG.baseBPM;
+        const beatDuration = 60 / bpm; // 每拍秒数 (32分音符单位通常为 beatDuration / 32)
+        const tickToSec = (tick) => (tick / 32) * beatDuration;
+
+        function formatNotes(notes, isAbove) {
+          return (notes || []).map(n => {
+            totalNotes++;
+            return {
+              type: n.type, // 1: Tap, 2: Drag, 3: Hold, 4: Flick
+              timeSec: tickToSec(n.time),
+              holdTimeSec: tickToSec(n.holdTime || 0),
+              x: n.positionX, // -9 ~ +9 范围标准横坐标
+              speed: n.speed || 1.0,
+              isAbove: isAbove,
+              hit: false,
+              miss: false
+            };
+          });
+        }
+
+        return {
+          id: idx,
+          bpm: bpm,
+          tickToSec: tickToSec,
+          moveEvents: line.judgeLineMoveEvents || [],
+          rotateEvents: line.judgeLineRotateEvents || [],
+          speedEvents: line.speedEvents || [],
+          notes: [...formatNotes(line.notesAbove, true), ...formatNotes(line.notesBelow, false)]
+        };
+      });
+    }
+
+    // 线性插值求当前 Tick 对应的值
+    function interpolate(events, curTick, defaultStart, defaultEnd) {
+      if (!events || events.length === 0) return defaultStart;
+      for (let ev of events) {
+        if (curTick >= ev.startTime && curTick <= ev.endTime) {
+          const p = (curTick - ev.startTime) / (ev.endTime - ev.startTime || 1);
+          return {
+            x: ev.start + (ev.end - ev.start) * p,
+            y: (ev.start2 !== undefined ? ev.start2 + (ev.end2 - ev.start2) * p : 0.5)
+          };
+        }
+      }
+      return { x: defaultStart, y: defaultEnd };
+    }
+
+    function getLineRotation(events, curTick) {
+      for (let ev of events) {
+        if (curTick >= ev.startTime && curTick <= ev.endTime) {
+          const p = (curTick - ev.startTime) / (ev.endTime - ev.startTime || 1);
+          return ev.start + (ev.end - ev.start) * p;
+        }
+      }
+      return 0;
+    }
+
+    // --- 触控事件与判定逻辑 ---
+    const activeTouches = new Map();
+
+    window.addEventListener('pointerdown', (e) => {
+      activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY, time: performance.now() });
+      handleInput(e.clientX, e.clientY, 'tap');
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (activeTouches.has(e.pointerId)) {
+        activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY, time: performance.now() });
+        handleInput(e.clientX, e.clientY, 'drag');
+      }
+    });
+    window.addEventListener('pointerup', (e) => { activeTouches.delete(e.pointerId); });
+    window.addEventListener('pointercancel', (e) => { activeTouches.delete(e.pointerId); });
+
+    function handleInput(touchX, touchY, inputType) {
+      if (!isPlaying) return;
+      const curTime = (audioCtx.currentTime - startTime) + (chartData.offset || 0);
+
+      parsedLines.forEach(line => {
+        line.notes.forEach(note => {
+          if (note.hit || note.miss) return;
+          const dt = Math.abs(curTime - note.timeSec);
+
+          // 简易判定窗口 (秒)
+          if (dt <= 0.16) {
+            if (note.type === 2 && inputType === 'drag') {
+              // Drag 滑过即可判定
+              note.hit = true;
+              registerHit(1.0);
+            } else if (note.type === 1 && inputType === 'tap') {
+              note.hit = true;
+              registerHit(dt <= 0.08 ? 1.0 : 0.65);
+            }
+          }
+        });
+      });
+    }
+
+    function registerHit(weight) {
+      if (weight === 1.0) perfectCount++;
+      else goodCount++;
+      combo++;
+      updateHUD();
+    }
+
+    function registerMiss() {
+      missCount++;
+      combo = 0;
+      updateHUD();
+    }
+
+    function updateHUD() {
+      const processed = perfectCount + goodCount + missCount;
+      const totalScore = processed === 0 ? 0 : Math.round(((perfectCount + goodCount * 0.65) / totalNotes) * 1000000);
+      const acc = processed === 0 ? 100 : (((perfectCount + goodCount * 0.65) / processed) * 100);
+
+      document.getElementById('combo-num').innerText = combo;
+      document.getElementById('score-val').innerText = totalScore.toString().padStart(7, '0');
+      document.getElementById('acc-val').innerText = acc.toFixed(2) + '%';
+    }
+
+    // --- 主渲染管线 ---
+    function render() {
+      if (!isPlaying) return;
+
+      const curSec = (audioCtx.currentTime - startTime) + (chartData.offset || 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // 1. 背景绘制 (暗化处理)
+      if (bgLoaded) {
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.drawImage(bgImg, 0, 0, W, H);
+        ctx.restore();
+      }
+
+      // 2. 判定线与音符绘制
+      parsedLines.forEach(line => {
+        const curTick = (curSec / (60 / line.bpm)) * 32;
+        const linePos = interpolate(line.moveEvents, curTick, 0.5, 0.5);
+        const rotDeg = getLineRotation(line.rotateEvents, curTick);
+
+        const lineX = linePos.x * W;
+        const lineY = (1.0 - linePos.y) * H; // 屏幕坐标倒置
+
+        ctx.save();
+        ctx.translate(lineX, lineY);
+        ctx.rotate((rotDeg * Math.PI) / 180);
+
+        // 绘制判定线
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(-W * 0.6, 0);
+        ctx.lineTo(W * 0.6, 0);
+        ctx.stroke();
+
+        // 绘制该线下的音符
+        line.notes.forEach(note => {
+          if (note.hit) return;
+          const timeDiff = note.timeSec - curSec;
+
+          // 超出判定窗口视作 Miss
+          if (timeDiff < -0.16 && !note.hit && !note.miss) {
+            note.miss = true;
+            registerMiss();
+            return;
+          }
+
+          // 只渲染当前时间窗内的音符 (前瞻 1.5 秒)
+          if (timeDiff > -0.2 && timeDiff < 1.5) {
+            const distance = timeDiff * 600 * note.speed * scale;
+            const noteScreenY = note.isAbove ? -distance : distance;
+            const noteScreenX = (note.x / 9) * (W * 0.45);
+
+            ctx.save();
+            ctx.translate(noteScreenX, noteScreenY);
+
+            // 音符类型对应样式
+            if (note.type === 1) { // Tap (蓝)
+              ctx.fillStyle = '#00e5ff';
+              ctx.fillRect(-35 * scale, -6 * scale, 70 * scale, 12 * scale);
+            } else if (note.type === 2) { // Drag (黄)
+              ctx.fillStyle = '#ffd54f';
+              ctx.fillRect(-30 * scale, -4 * scale, 60 * scale, 8 * scale);
+            } else if (note.type === 3) { // Hold (长条)
+              const holdLen = note.holdTimeSec * 600 * note.speed * scale;
+              ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
+              ctx.fillRect(-30 * scale, -holdLen, 60 * scale, holdLen);
+              ctx.fillStyle = '#00e5ff';
+              ctx.fillRect(-35 * scale, -6 * scale, 70 * scale, 12 * scale);
+            } else if (note.type === 4) { // Flick (粉红)
+              ctx.fillStyle = '#ff4081';
+              ctx.fillRect(-35 * scale, -6 * scale, 70 * scale, 12 * scale);
+            }
+
+            ctx.restore();
+          }
+        });
+
+        ctx.restore();
+      });
+
+      requestAnimationFrame(render);
+    }
+
+    // --- 开始游玩控制 ---
+    document.getElementById('start-btn').addEventListener('click', async () => {
+      await initAudio();
+      if (!chartData) {
+        alert("未能读取到谱面 JSON，请通过文件选择栏导入！");
+        return;
+      }
+      prepareChart();
+
+      document.getElementById('start-panel').style.display = 'none';
+      isPlaying = true;
+
+      // 启动音轨
+      if (audioBuffer) {
+        audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = audioBuffer;
+        audioSource.connect(audioCtx.destination);
+        startTime = audioCtx.currentTime;
+        audioSource.start(0);
+      } else {
+        startTime = audioCtx.currentTime;
+      }
+
+      requestAnimationFrame(render);
+    });
+  </script>
+</body>
+</html>
