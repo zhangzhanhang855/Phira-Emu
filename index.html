@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira High Performance Engine</title>
+  <title>Phira Pure Engine - Fixed Drag & Hold</title>
   <style>
     * {
       box-sizing: border-box;
@@ -219,7 +219,7 @@
   <div id="ui-overlay">
     <div class="hud-top">
       <div>
-        <div id="song-name" style="font-weight: bold; font-size: 18px;">Cryogenic</div>
+        <div id="song-name" style="font-weight: bold; font-size: 18px;">曲目名称</div>
         <div id="song-desc" style="opacity: 0.7; font-size: 13px;">等待载入...</div>
       </div>
       <div class="hud-combo">
@@ -239,7 +239,7 @@
       <div class="drop-zone" id="chart-drop">
         <h3 style="margin-bottom: 8px;">1. 导入谱面 ZIP (5文件)</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含：info.txt、info.yml、JSON、歌曲、曲绘[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)[span_2](start_span)[span_2](end_span)
+          包含：info.txt、info.yml、JSON、歌曲、曲绘[span_11](start_span)[span_11](end_span)[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span)
         </p>
         <span id="chart-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择</span>
         <input type="file" id="chart-input" accept=".zip">
@@ -248,7 +248,7 @@
       <div class="drop-zone" id="skin-drop">
         <h3 style="margin-bottom: 8px;">2. 导入皮肤与音效 ZIP</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含：贴图及 _mh、hit_fx 爆弹序列图[span_3](start_span)[span_3](end_span)[span_4](start_span)[span_4](end_span)、<br>音效与 ending.mp3[span_5](start_span)[span_5](end_span)
+          包含：贴图及 _mh、hit_fx 爆弹序列图[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)、<br>音效与 ending.mp3[span_16](start_span)[span_16](end_span)
         </p>
         <span id="skin-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择 (可选)</span>
         <input type="file" id="skin-input" accept=".zip">
@@ -269,14 +269,14 @@
     <div class="result-card">
       <div class="result-rank" id="res-rank">V</div>
       <div class="result-info">
-        <div id="res-title" style="font-size: 20px; font-weight: 700;">Cryogenic</div>
-        <div class="result-score" id="res-score">0982540</div>
+        <div id="res-title" style="font-size: 20px; font-weight: 700;">曲目完成</div>
+        <div class="result-score" id="res-score">0000000</div>
         <div class="result-stats">
-          <div>ACC: <span class="stat-val" id="res-acc">98.25%</span></div>
-          <div>Max Combo: <span class="stat-val" id="res-combo">620</span></div>
-          <div>Perfect: <span class="stat-val" style="color:#00e5ff;" id="res-perf">580</span></div>
-          <div>Good: <span class="stat-val" style="color:#ffd54f;" id="res-good">20</span></div>
-          <div>Miss: <span class="stat-val" style="color:#ff1744;" id="res-miss">5</span></div>
+          <div>ACC: <span class="stat-val" id="res-acc">100.00%</span></div>
+          <div>Max Combo: <span class="stat-val" id="res-combo">0</span></div>
+          <div>Perfect: <span class="stat-val" style="color:#00e5ff;" id="res-perf">0</span></div>
+          <div>Good: <span class="stat-val" style="color:#ffd54f;" id="res-good">0</span></div>
+          <div>Miss: <span class="stat-val" style="color:#ff1744;" id="res-miss">0</span></div>
         </div>
       </div>
     </div>
@@ -285,7 +285,6 @@
 
   <script>
     const canvas = document.getElementById('gameCanvas');
-    // 启用 desynchronized 减少 iOS/WebKit 下的合成帧等待
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     
     let audioCtx = null;
@@ -306,10 +305,10 @@
     };
 
     let songMeta = {
-      title: "Cryogenic",
-      level: "IN Lv.15",
-      composer: "Camellia ft. Petra Gurin",
-      charter: "「HD」 Falsus",
+      title: "Phira Track",
+      level: "Lv.15",
+      composer: "Unknown",
+      charter: "Unknown",
       offset: 0.0
     };
 
@@ -331,7 +330,7 @@
     function resize() {
       W = window.innerWidth;
       H = window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2); // 限制最大 DPR 为 2，避免 3x 屏幕 GPU 算力过载
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = W * dpr;
       canvas.height = H * dpr;
       canvas.style.width = W + 'px';
@@ -353,7 +352,6 @@
       if (audioCtx.state === 'suspended') await audioCtx.resume();
     }
 
-    // --- 低延迟音效播放器（带 12ms 瞬态节流，解决音频队列拥堵 100ms 延迟）---
     const lastSoundPlayTime = { Tap: 0, Drag: 0, Hold: 0, Flick: 0 };
 
     function playHitSound(type) {
@@ -362,7 +360,6 @@
       const map = { 1: "Tap", 2: "Drag", 3: "Hold", 4: "Flick" };
       const name = map[type];
 
-      // 12ms 节流限制：同一音效在极短时间内不重复创建 Node，杜绝高密串音效积压
       if (now - lastSoundPlayTime[name] < 12) return;
       lastSoundPlayTime[name] = now;
 
@@ -374,7 +371,6 @@
         return;
       }
 
-      // 备用纯音合成
       try {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -409,7 +405,6 @@
     }
 
     function spawnHitFX(worldX, worldY, isPerfect) {
-      // 限制屏幕粒子上限为 36，超出直接淘汰旧粒子，保护渲染线程
       if (hitParticles.length > 36) hitParticles.shift();
       hitParticles.push({
         x: worldX,
@@ -633,7 +628,6 @@
           });
         }
 
-        // 严格按击打时间升序排列，为活动窗口快速截断提供基础
         const allNotes = [...formatNotes(line.notesAbove, true), ...formatNotes(line.notesBelow, false)];
         allNotes.sort((a, b) => a.timeSec - b.timeSec);
 
@@ -647,7 +641,6 @@
           rotateEvents: line.rotateEvents || line.judgeLineRotateEvents || [],
           disappearEvents: line.judgeLineDisappearEvents || [],
           notes: allNotes,
-          // 活动音符起始检索指针
           activeNoteHeadIndex: 0
         };
       });
@@ -688,15 +681,15 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    function computeNoteLocalY(note, curFloorPos, curSec) {
-      const rawFloorDiff = note.startFloor - curFloorPos;
-      const dt = note.timeSec - curSec;
-      const dist = Math.abs(rawFloorDiff) * 380 * scale;
-      const sign = (dt >= 0) ? 1 : -1;
-      return note.isAbove ? (-dist * sign) : (dist * sign);
+    // 核心物理距离映射：严格按 floorPosition 相对差值计算，杜绝正负号混乱倒错
+    function computeNoteLocalY(note, curFloorPos) {
+      const floorDiff = note.startFloor - curFloorPos;
+      const dist = floorDiff * 380 * scale;
+      // 官方标准：上方的音符随 floor 递减从负 Y（屏幕上方）落下；下方的音符从正 Y 落下
+      return note.isAbove ? -dist : dist;
     }
 
-    // --- 高性能触控判定流 ---
+    // --- 触控引擎与打击判定 ---
     const activeTouches = new Map();
 
     window.addEventListener('pointerdown', (e) => {
@@ -756,7 +749,6 @@
         const touchLocalX = dx * cosR - dy * sinR;
         const touchLocalY = dx * sinR + dy * cosR;
 
-        // 仅在当前活跃指针窗口中检索，跳过已过去的 Note
         const notes = line.notes;
         const startIdx = line.activeNoteHeadIndex;
 
@@ -765,15 +757,14 @@
           if (note.hit || note.miss) continue;
 
           const dt = curTime - note.timeSec;
-          // 若音符还在 0.22s 之后，后续音符都不可能进入本次打击窗口，直接跳出当前线
           if (dt < -0.22) break;
 
-          const noteLocalY = computeNoteLocalY(note, curFloorPos, curTime);
+          const noteLocalY = computeNoteLocalY(note, curFloorPos);
           const noteLocalX = (note.x / 9) * (W * 0.42);
 
           const horizDist = Math.abs(touchLocalX - noteLocalX);
           const horizThreshold = 130 * scale * userNoteScale;
-          const isTouchNearLine = Math.abs(touchLocalY) < (110 * scale * userNoteScale);
+          const isTouchNearLine = Math.abs(touchLocalY) < (120 * scale * userNoteScale);
           const noteDistToLine = Math.abs(noteLocalY);
 
           if (horizDist < horizThreshold && isTouchNearLine) {
@@ -786,7 +777,7 @@
               const isPerf = Math.abs(dt) <= 0.08;
               registerHit(isPerf ? 1.0 : 0.65);
               spawnHitFX(hitWorldX, hitWorldY, isPerf);
-            } else if (note.type === 2 && noteDistToLine < (55 * scale * userNoteScale) && Math.abs(dt) <= 0.10) {
+            } else if (note.type === 2 && noteDistToLine < (60 * scale * userNoteScale) && Math.abs(dt) <= 0.10) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
@@ -808,9 +799,8 @@
       }
     }
 
+    // 核心修复：Hold 持续按压跟踪（防止 0.5s 误退消失）
     function updateHoldingStates(curTime) {
-      if (activeTouches.size === 0) return;
-
       for (let l = 0; l < parsedLines.length; l++) {
         const line = parsedLines[l];
         const curTick = line.secToTick(curTime);
@@ -829,14 +819,26 @@
         for (let i = startIdx; i < notes.length; i++) {
           const note = notes[i];
           if (note.timeSec - curTime > 0.5) break;
+          // 仅关注已激活且生命周期内的 Hold
           if (note.type !== 3 || !note.headHit || note.hit || note.miss) continue;
-          if (curTime < note.timeSec || curTime > note.timeSec + note.holdTimeSec) continue;
+
+          // 核心修复：只要在长条持续时间内，绝对不报普通超时 Miss！
+          if (curTime < note.timeSec) continue;
+
+          // 若长按时间已完整走完，顺利结算
+          if (curTime >= note.timeSec + note.holdTimeSec) {
+            note.hit = true;
+            registerHit(1.0);
+            const noteLocalX = (note.x / 9) * (W * 0.42);
+            spawnHitFX(lx + noteLocalX * cosR, ly + noteLocalX * -sinR, true);
+            continue;
+          }
 
           const noteLocalX = (note.x / 9) * (W * 0.42);
-          const horizThreshold = 140 * scale * userNoteScale;
-          const vertThreshold = 140 * scale * userNoteScale;
+          const horizThreshold = 160 * scale * userNoteScale; // 宽容按压范围
+          const vertThreshold = 160 * scale * userNoteScale;
 
-          let isBeingHeld = false;
+          let isTouchCovering = false;
           for (let [id, touch] of activeTouches) {
             const dx = touch.x - lx;
             const dy = touch.y - ly;
@@ -844,19 +846,28 @@
             const tY = dx * sinR + dy * cosR;
 
             if (Math.abs(tX - noteLocalX) < horizThreshold && Math.abs(tY) < vertThreshold) {
-              note.holding = true;
-              note.lastTouchTime = curTime;
-              isBeingHeld = true;
+              isTouchCovering = true;
               break;
             }
           }
 
-          if (isBeingHeld) {
+          // 只要有触控覆盖，持续刷新状态与 HitFX
+          if (isTouchCovering) {
+            note.holding = true;
+            note.lastTouchTime = curTime;
+
             if (!note.holdFxTimer || curTime - note.holdFxTimer > 0.12) {
               note.holdFxTimer = curTime;
               const hitWorldX = lx + noteLocalX * cosR;
               const hitWorldY = ly + noteLocalX * -sinR;
               spawnHitFX(hitWorldX, hitWorldY, true);
+            }
+          } else {
+            // 断触容错：超过 0.35 秒真正未检测到触点才判断连
+            if (curTime - note.lastTouchTime > 0.35) {
+              note.holding = false;
+              note.miss = true;
+              registerMiss();
             }
           }
         }
@@ -922,7 +933,7 @@
       }
     }
 
-    // --- 高帧率主渲染管线 (双指针活动窗口剪枝) ---
+    // --- 主渲染管线 ---
     function render() {
       if (!isPlaying) return;
 
@@ -966,18 +977,15 @@
         ctx.translate(lx, ly);
         ctx.rotate((rotDeg * Math.PI) / 180);
 
-        // 判定线极速双 Pass 描边替代昂贵的 shadowBlur
         if (lineAlpha > 0.01) {
           ctx.save();
           ctx.globalAlpha = lineAlpha;
-          // 外层柔光 Pass
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
           ctx.lineWidth = 7 * scale;
           ctx.beginPath();
           ctx.moveTo(-W * 4, 0);
           ctx.lineTo(W * 4, 0);
           ctx.stroke();
-          // 内层高亮核心线 Pass
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 3.5 * scale;
           ctx.stroke();
@@ -987,7 +995,6 @@
         const notes = line.notes;
         let headIdx = line.activeNoteHeadIndex;
 
-        // 移动活动窗口起始指针：跳过早已结束且判定的音符
         while (headIdx < notes.length) {
           const n = notes[headIdx];
           const isHoldAlive = (n.type === 3 && n.headHit && !n.hit && !n.miss);
@@ -1001,54 +1008,33 @@
         }
         line.activeNoteHeadIndex = headIdx;
 
-        // 仅处理活动窗口内的音符
         for (let i = headIdx; i < notes.length; i++) {
           const note = notes[i];
           if (note.hit) continue;
 
-          // 普通音符超时判定
+          // 普通音符超时判定 (Hold 绝不进入此处)
           if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
             continue;
           }
 
-          // Hold 判定逻辑
-          if (note.type === 3) {
-            if (!note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
-              note.miss = true;
-              registerMiss();
-              continue;
-            }
-
-            if (note.headHit && !note.miss) {
-              if (curSec > note.lastTouchTime + 0.28 && curSec < note.timeSec + note.holdTimeSec) {
-                note.miss = true;
-                note.holding = false;
-                registerMiss();
-                continue;
-              }
-            }
-
-            if (note.headHit && curSec >= note.timeSec + note.holdTimeSec) {
-              note.hit = true;
-              registerHit(1.0);
-              const noteLocalX = (note.x / 9) * (W * 0.42);
-              const rad = (-rotDeg * Math.PI) / 180;
-              spawnHitFX(lx + noteLocalX * Math.cos(-rad), ly + noteLocalX * Math.sin(-rad), true);
-              continue;
-            }
+          // 未击打 Hold 超时判定
+          if (note.type === 3 && !note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
+            note.miss = true;
+            registerMiss();
+            continue;
           }
 
-          // 时间窗口提前剪枝：未来 2.0s 之外的音符无需参与坐标与绘制，直接结束当前线循环
           const timeToHit = note.timeSec - curSec;
           if (timeToHit > 2.0) break;
-          if (timeToHit < -0.25) continue;
+          if (timeToHit < -0.25 && note.type !== 3) continue;
 
-          const noteY = computeNoteLocalY(note, curFloorPos, curSec);
+          // 核心计算局部 Y：严格一致，不倒立
+          const noteY = computeNoteLocalY(note, curFloorPos);
           const noteX = (note.x / 9) * (W * 0.42);
 
-          if (Math.abs(noteY) > H * 1.5) continue;
+          if (Math.abs(noteY) > H * 1.5 && note.type !== 3) continue;
 
           ctx.save();
           ctx.translate(noteX, noteY);
@@ -1078,8 +1064,9 @@
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-baseWidth / 2.2, -h / 2, baseWidth / 1.1, h);
             }
-          } else if (note.type === 3) { // Hold
+          } else if (note.type === 3) { // Hold (修剪推进)
             let holdFloorSpan = Math.abs(note.endFloor - note.startFloor);
+            // 实时修剪推进：按压中身体向判定线缩进
             if (note.headHit) {
               holdFloorSpan = Math.max(0, Math.abs(note.endFloor - curFloorPos));
             }
@@ -1121,10 +1108,8 @@
         ctx.restore();
       }
 
-      // 3. 渲染打击粒子
       renderHitFX(now);
 
-      // 4. 曲目结算
       if (bgmBuffer && curSec > bgmBuffer.duration + 0.8 && !isEnded) {
         isEnded = true;
         showResult();
