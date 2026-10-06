@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine - Fixed Sizing & Hold FX</title>
+  <title>Phira High Performance Engine</title>
   <style>
     * {
       box-sizing: border-box;
@@ -239,7 +239,7 @@
       <div class="drop-zone" id="chart-drop">
         <h3 style="margin-bottom: 8px;">1. 导入谱面 ZIP (5文件)</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含：info.txt、info.yml、JSON、歌曲、曲绘
+          包含：info.txt、info.yml、JSON、歌曲、曲绘[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)[span_2](start_span)[span_2](end_span)
         </p>
         <span id="chart-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择</span>
         <input type="file" id="chart-input" accept=".zip">
@@ -248,7 +248,7 @@
       <div class="drop-zone" id="skin-drop">
         <h3 style="margin-bottom: 8px;">2. 导入皮肤与音效 ZIP</h3>
         <p style="font-size: 12px; opacity: 0.8; line-height: 1.6;">
-          包含：贴图及 _mh、hit_fx 爆弹序列图、<br>音效与 ending.mp3
+          包含：贴图及 _mh、hit_fx 爆弹序列图[span_3](start_span)[span_3](end_span)[span_4](start_span)[span_4](end_span)、<br>音效与 ending.mp3[span_5](start_span)[span_5](end_span)
         </p>
         <span id="skin-file-name" style="display:block; margin-top:10px; font-size:12px; color:#00e5ff;">未选择 (可选)</span>
         <input type="file" id="skin-input" accept=".zip">
@@ -285,8 +285,11 @@
 
   <script>
     const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    // 启用 desynchronized 减少 iOS/WebKit 下的合成帧等待
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    
     let audioCtx = null;
+    let sfxGainNode = null;
     let bgmBuffer = null;
     let endingBuffer = null;
     let bgmSource = null;
@@ -328,7 +331,7 @@
     function resize() {
       W = window.innerWidth;
       H = window.innerHeight;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // 限制最大 DPR 为 2，避免 3x 屏幕 GPU 算力过载
       canvas.width = W * dpr;
       canvas.height = H * dpr;
       canvas.style.width = W + 'px';
@@ -341,60 +344,78 @@
     resize();
 
     async function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+        sfxGainNode = audioCtx.createGain();
+        sfxGainNode.gain.setValueAtTime(0.85, audioCtx.currentTime);
+        sfxGainNode.connect(audioCtx.destination);
+      }
       if (audioCtx.state === 'suspended') await audioCtx.resume();
     }
 
+    // --- 低延迟音效播放器（带 12ms 瞬态节流，解决音频队列拥堵 100ms 延迟）---
+    const lastSoundPlayTime = { Tap: 0, Drag: 0, Hold: 0, Flick: 0 };
+
     function playHitSound(type) {
       if (!audioCtx) return;
+      const now = performance.now();
       const map = { 1: "Tap", 2: "Drag", 3: "Hold", 4: "Flick" };
       const name = map[type];
+
+      // 12ms 节流限制：同一音效在极短时间内不重复创建 Node，杜绝高密串音效积压
+      if (now - lastSoundPlayTime[name] < 12) return;
+      lastSoundPlayTime[name] = now;
+
       if (ASSETS.audioBuffers[name]) {
         const s = audioCtx.createBufferSource();
         s.buffer = ASSETS.audioBuffers[name];
-        s.connect(audioCtx.destination);
+        s.connect(sfxGainNode);
         s.start(0);
         return;
       }
+
+      // 备用纯音合成
       try {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(sfxGainNode);
         const t = audioCtx.currentTime;
         if (type === 1) {
           osc.type = "sine";
           osc.frequency.setValueAtTime(1400, t);
-          osc.frequency.exponentialRampToValueAtTime(300, t + 0.04);
-          gain.gain.setValueAtTime(0.7, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+          osc.frequency.exponentialRampToValueAtTime(300, t + 0.035);
+          gain.gain.setValueAtTime(0.6, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
           osc.start(t);
-          osc.stop(t + 0.04);
+          osc.stop(t + 0.035);
         } else if (type === 2) {
           osc.type = "triangle";
           osc.frequency.setValueAtTime(750, t);
           gain.gain.setValueAtTime(0.35, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
           osc.start(t);
-          osc.stop(t + 0.025);
+          osc.stop(t + 0.02);
         } else if (type === 4) {
           osc.type = "sawtooth";
           osc.frequency.setValueAtTime(900, t);
-          osc.frequency.linearRampToValueAtTime(2400, t + 0.06);
-          gain.gain.setValueAtTime(0.6, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+          osc.frequency.linearRampToValueAtTime(2400, t + 0.05);
+          gain.gain.setValueAtTime(0.5, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
           osc.start(t);
-          osc.stop(t + 0.06);
+          osc.stop(t + 0.05);
         }
       } catch (e) {}
     }
 
     function spawnHitFX(worldX, worldY, isPerfect) {
+      // 限制屏幕粒子上限为 36，超出直接淘汰旧粒子，保护渲染线程
+      if (hitParticles.length > 36) hitParticles.shift();
       hitParticles.push({
         x: worldX,
         y: worldY,
         startTime: performance.now(),
-        duration: 320,
+        duration: 280,
         isPerfect: isPerfect
       });
     }
@@ -533,7 +554,7 @@
       }
     }
 
-    // --- 谱面数据与积分表构建 ---
+    // --- 极速预处理与时序队列化 ---
     function prepareChart() {
       if (!ASSETS.chartJson || !ASSETS.chartJson.judgeLineList) return;
       totalNotes = 0;
@@ -607,10 +628,14 @@
               holding: false,
               headHit: false,
               lastTouchTime: 0,
-              holdFxTimer: 0 // 控制 Hold 持续发光与高频爆弹
+              holdFxTimer: 0
             };
           });
         }
+
+        // 严格按击打时间升序排列，为活动窗口快速截断提供基础
+        const allNotes = [...formatNotes(line.notesAbove, true), ...formatNotes(line.notesBelow, false)];
+        allNotes.sort((a, b) => a.timeSec - b.timeSec);
 
         return {
           id: idx,
@@ -621,7 +646,9 @@
           moveEvents: line.judgeLineMoveEvents || [],
           rotateEvents: line.rotateEvents || line.judgeLineRotateEvents || [],
           disappearEvents: line.judgeLineDisappearEvents || [],
-          notes: [...formatNotes(line.notesAbove, true), ...formatNotes(line.notesBelow, false)]
+          notes: allNotes,
+          // 活动音符起始检索指针
+          activeNoteHeadIndex: 0
         };
       });
     }
@@ -669,7 +696,7 @@
       return note.isAbove ? (-dist * sign) : (dist * sign);
     }
 
-    // --- 触控引擎与抗漏触判定 ---
+    // --- 高性能触控判定流 ---
     const activeTouches = new Map();
 
     window.addEventListener('pointerdown', (e) => {
@@ -707,12 +734,12 @@
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
 
-    // 严谨且包容的打击检测 (解决 Tap 偶尔点不到)
     function checkHits(screenX, screenY, inputType) {
       if (!isPlaying) return;
       const curTime = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
 
-      parsedLines.forEach(line => {
+      for (let l = 0; l < parsedLines.length; l++) {
+        const line = parsedLines[l];
         const curTick = line.secToTick(curTime);
         const linePos = evalMoveEvent(line.moveEvents, curTick);
         const rotDeg = evalNumberEvent(line.rotateEvents, curTick, 0);
@@ -721,55 +748,55 @@
         const lx = linePos.x * W;
         const ly = (1.0 - linePos.y) * H;
         const rad = (-rotDeg * Math.PI) / 180;
+        const cosR = Math.cos(rad);
+        const sinR = Math.sin(rad);
 
         const dx = screenX - lx;
         const dy = screenY - ly;
-        const touchLocalX = dx * Math.cos(rad) - dy * Math.sin(rad);
-        const touchLocalY = dx * Math.sin(rad) + dy * Math.cos(rad);
+        const touchLocalX = dx * cosR - dy * sinR;
+        const touchLocalY = dx * sinR + dy * cosR;
 
-        line.notes.forEach(note => {
-          if (note.hit || note.miss) return;
+        // 仅在当前活跃指针窗口中检索，跳过已过去的 Note
+        const notes = line.notes;
+        const startIdx = line.activeNoteHeadIndex;
+
+        for (let i = startIdx; i < notes.length; i++) {
+          const note = notes[i];
+          if (note.hit || note.miss) continue;
+
           const dt = curTime - note.timeSec;
+          // 若音符还在 0.22s 之后，后续音符都不可能进入本次打击窗口，直接跳出当前线
+          if (dt < -0.22) break;
 
           const noteLocalY = computeNoteLocalY(note, curFloorPos, curTime);
           const noteLocalX = (note.x / 9) * (W * 0.42);
 
-          // 判定宽度随自定义缩放等比自适应
           const horizDist = Math.abs(touchLocalX - noteLocalX);
           const horizThreshold = 130 * scale * userNoteScale;
-
-          // 修正：Tap 的垂直判定放宽到触碰判定线周边，只要处于击打时间窗内，绝不漏触
           const isTouchNearLine = Math.abs(touchLocalY) < (110 * scale * userNoteScale);
           const noteDistToLine = Math.abs(noteLocalY);
 
           if (horizDist < horizThreshold && isTouchNearLine) {
-            const hitWorldX = lx + noteLocalX * Math.cos(-rad);
-            const hitWorldY = ly + noteLocalX * Math.sin(-rad);
+            const hitWorldX = lx + noteLocalX * cosR;
+            const hitWorldY = ly + noteLocalX * -sinR;
 
-            // 1. Tap (时间窗口 ±0.16s 内均可精准判定，消除漏触)
             if (note.type === 1 && inputType === 'tap' && Math.abs(dt) <= 0.16) {
               note.hit = true;
               playHitSound(1);
               const isPerf = Math.abs(dt) <= 0.08;
               registerHit(isPerf ? 1.0 : 0.65);
               spawnHitFX(hitWorldX, hitWorldY, isPerf);
-            }
-            // 2. Drag (贴线严格，杜绝半空早爆)
-            else if (note.type === 2 && noteDistToLine < (50 * scale * userNoteScale) && Math.abs(dt) <= 0.10) {
+            } else if (note.type === 2 && noteDistToLine < (55 * scale * userNoteScale) && Math.abs(dt) <= 0.10) {
               note.hit = true;
               playHitSound(2);
               registerHit(1.0);
               spawnHitFX(hitWorldX, hitWorldY, true);
-            }
-            // 3. Flick (滑动加速度触发)
-            else if (note.type === 4 && inputType === 'flick' && Math.abs(dt) <= 0.16) {
+            } else if (note.type === 4 && inputType === 'flick' && Math.abs(dt) <= 0.16) {
               note.hit = true;
               playHitSound(4);
               registerHit(1.0);
               spawnHitFX(hitWorldX, hitWorldY, true);
-            }
-            // 4. Hold 起始击打
-            else if (note.type === 3 && inputType === 'tap' && Math.abs(dt) <= 0.16 && !note.headHit) {
+            } else if (note.type === 3 && inputType === 'tap' && Math.abs(dt) <= 0.16 && !note.headHit) {
               note.headHit = true;
               note.holding = true;
               note.lastTouchTime = curTime;
@@ -777,13 +804,15 @@
               spawnHitFX(hitWorldX, hitWorldY, true);
             }
           }
-        });
-      });
+        }
+      }
     }
 
-    // 逐帧主动轮询按压中的 Hold，并产生持续按压特效
     function updateHoldingStates(curTime) {
-      parsedLines.forEach(line => {
+      if (activeTouches.size === 0) return;
+
+      for (let l = 0; l < parsedLines.length; l++) {
+        const line = parsedLines[l];
         const curTick = line.secToTick(curTime);
         const linePos = evalMoveEvent(line.moveEvents, curTick);
         const rotDeg = evalNumberEvent(line.rotateEvents, curTick, 0);
@@ -791,10 +820,17 @@
         const lx = linePos.x * W;
         const ly = (1.0 - linePos.y) * H;
         const rad = (-rotDeg * Math.PI) / 180;
+        const cosR = Math.cos(rad);
+        const sinR = Math.sin(rad);
 
-        line.notes.forEach(note => {
-          if (note.type !== 3 || !note.headHit || note.hit || note.miss) return;
-          if (curTime < note.timeSec || curTime > note.timeSec + note.holdTimeSec) return;
+        const notes = line.notes;
+        const startIdx = line.activeNoteHeadIndex;
+
+        for (let i = startIdx; i < notes.length; i++) {
+          const note = notes[i];
+          if (note.timeSec - curTime > 0.5) break;
+          if (note.type !== 3 || !note.headHit || note.hit || note.miss) continue;
+          if (curTime < note.timeSec || curTime > note.timeSec + note.holdTimeSec) continue;
 
           const noteLocalX = (note.x / 9) * (W * 0.42);
           const horizThreshold = 140 * scale * userNoteScale;
@@ -804,8 +840,8 @@
           for (let [id, touch] of activeTouches) {
             const dx = touch.x - lx;
             const dy = touch.y - ly;
-            const tX = dx * Math.cos(rad) - dy * Math.sin(rad);
-            const tY = dx * Math.sin(rad) + dy * Math.cos(rad);
+            const tX = dx * cosR - dy * sinR;
+            const tY = dx * sinR + dy * cosR;
 
             if (Math.abs(tX - noteLocalX) < horizThreshold && Math.abs(tY) < vertThreshold) {
               note.holding = true;
@@ -815,17 +851,16 @@
             }
           }
 
-          // 核心点：Hold 按住过程中产生持续的 HitFX 爆弹粒子与光效！
           if (isBeingHeld) {
             if (!note.holdFxTimer || curTime - note.holdFxTimer > 0.12) {
               note.holdFxTimer = curTime;
-              const hitWorldX = lx + noteLocalX * Math.cos(-rad);
-              const hitWorldY = ly + noteLocalX * Math.sin(-rad);
+              const hitWorldX = lx + noteLocalX * cosR;
+              const hitWorldY = ly + noteLocalX * -sinR;
               spawnHitFX(hitWorldX, hitWorldY, true);
             }
           }
-        });
-      });
+        }
+      }
     }
 
     function registerHit(weight) {
@@ -853,6 +888,7 @@
     }
 
     function renderHitFX(now) {
+      if (hitParticles.length === 0) return;
       for (let i = hitParticles.length - 1; i >= 0; i--) {
         const p = hitParticles[i];
         const elapsed = now - p.startTime;
@@ -874,7 +910,6 @@
           const fw = img.width / 5;
           const fh = img.height / 6;
           const renderSize = 150 * scale * userNoteScale;
-
           ctx.drawImage(img, col * fw, row * fh, fw, fh, -renderSize / 2, -renderSize / 2, renderSize, renderSize);
         } else {
           ctx.strokeStyle = p.isPerfect ? '#ffe082' : '#80deea';
@@ -887,7 +922,7 @@
       }
     }
 
-    // --- 主渲染管线 ---
+    // --- 高帧率主渲染管线 (双指针活动窗口剪枝) ---
     function render() {
       if (!isPlaying) return;
 
@@ -916,7 +951,8 @@
       }
 
       // 2. 判定线与音符
-      parsedLines.forEach(line => {
+      for (let l = 0; l < parsedLines.length; l++) {
+        const line = parsedLines[l];
         const curTick = line.secToTick(curSec);
         const linePos = evalMoveEvent(line.moveEvents, curTick);
         const rotDeg = evalNumberEvent(line.rotateEvents, curTick, 0);
@@ -930,34 +966,59 @@
         ctx.translate(lx, ly);
         ctx.rotate((rotDeg * Math.PI) / 180);
 
+        // 判定线极速双 Pass 描边替代昂贵的 shadowBlur
         if (lineAlpha > 0.01) {
           ctx.save();
           ctx.globalAlpha = lineAlpha;
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 3.5 * scale;
-          ctx.shadowColor = '#ffffff';
-          ctx.shadowBlur = 5 * scale;
+          // 外层柔光 Pass
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.lineWidth = 7 * scale;
           ctx.beginPath();
           ctx.moveTo(-W * 4, 0);
           ctx.lineTo(W * 4, 0);
           ctx.stroke();
+          // 内层高亮核心线 Pass
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3.5 * scale;
+          ctx.stroke();
           ctx.restore();
         }
 
-        line.notes.forEach(note => {
-          if (note.hit) return;
+        const notes = line.notes;
+        let headIdx = line.activeNoteHeadIndex;
 
+        // 移动活动窗口起始指针：跳过早已结束且判定的音符
+        while (headIdx < notes.length) {
+          const n = notes[headIdx];
+          const isHoldAlive = (n.type === 3 && n.headHit && !n.hit && !n.miss);
+          if ((n.hit || n.miss) && !isHoldAlive) {
+            headIdx++;
+          } else if (curSec - n.timeSec > 0.35 && !isHoldAlive) {
+            headIdx++;
+          } else {
+            break;
+          }
+        }
+        line.activeNoteHeadIndex = headIdx;
+
+        // 仅处理活动窗口内的音符
+        for (let i = headIdx; i < notes.length; i++) {
+          const note = notes[i];
+          if (note.hit) continue;
+
+          // 普通音符超时判定
           if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
             note.miss = true;
             registerMiss();
-            return;
+            continue;
           }
 
+          // Hold 判定逻辑
           if (note.type === 3) {
             if (!note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
               note.miss = true;
               registerMiss();
-              return;
+              continue;
             }
 
             if (note.headHit && !note.miss) {
@@ -965,33 +1026,33 @@
                 note.miss = true;
                 note.holding = false;
                 registerMiss();
-                return;
+                continue;
               }
             }
 
-            // Hold 自然完成结算
             if (note.headHit && curSec >= note.timeSec + note.holdTimeSec) {
               note.hit = true;
               registerHit(1.0);
               const noteLocalX = (note.x / 9) * (W * 0.42);
               const rad = (-rotDeg * Math.PI) / 180;
               spawnHitFX(lx + noteLocalX * Math.cos(-rad), ly + noteLocalX * Math.sin(-rad), true);
-              return;
+              continue;
             }
           }
 
+          // 时间窗口提前剪枝：未来 2.0s 之外的音符无需参与坐标与绘制，直接结束当前线循环
           const timeToHit = note.timeSec - curSec;
-          if (timeToHit < -0.25 || timeToHit > 2.2) return;
+          if (timeToHit > 2.0) break;
+          if (timeToHit < -0.25) continue;
 
           const noteY = computeNoteLocalY(note, curFloorPos, curSec);
           const noteX = (note.x / 9) * (W * 0.42);
 
-          if (Math.abs(noteY) > H * 1.5) return;
+          if (Math.abs(noteY) > H * 1.5) continue;
 
           ctx.save();
           ctx.translate(noteX, noteY);
 
-          // 核心修复：统一标准化音符尺寸比例 (无论原图多大，统一步调)
           const baseWidth = 125 * scale * userNoteScale;
           const isMh = note.isMulti;
 
@@ -1017,7 +1078,7 @@
               ctx.fillStyle = '#ffeb3b';
               ctx.fillRect(-baseWidth / 2.2, -h / 2, baseWidth / 1.1, h);
             }
-          } else if (note.type === 3) { // Hold (推平修剪与长条发光)
+          } else if (note.type === 3) { // Hold
             let holdFloorSpan = Math.abs(note.endFloor - note.startFloor);
             if (note.headHit) {
               holdFloorSpan = Math.max(0, Math.abs(note.endFloor - curFloorPos));
@@ -1034,14 +1095,11 @@
               else ctx.fillRect(-baseWidth / 2, 0, baseWidth, holdLen);
             }
 
-            // 按住时产生判定线发光光晕
             if (note.headHit) {
-              ctx.save();
-              ctx.fillStyle = isMh ? 'rgba(255, 235, 59, 0.3)' : 'rgba(0, 229, 255, 0.3)';
+              ctx.fillStyle = isMh ? 'rgba(255, 235, 59, 0.28)' : 'rgba(0, 229, 255, 0.28)';
               ctx.beginPath();
               ctx.arc(0, 0, 36 * scale * userNoteScale, 0, Math.PI * 2);
               ctx.fill();
-              ctx.restore();
             }
           } else if (note.type === 4) { // Flick
             const img = isMh ? ASSETS.images['Flick_mh'] : ASSETS.images['Flick'];
@@ -1058,10 +1116,10 @@
           }
 
           ctx.restore();
-        });
+        }
 
         ctx.restore();
-      });
+      }
 
       // 3. 渲染打击粒子
       renderHitFX(now);
