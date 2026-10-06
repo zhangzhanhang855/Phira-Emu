@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Player - Cryogenic</title>
+  <title>Phira Core Player - Cryogenic</title>
   <style>
     * {
       box-sizing: border-box;
@@ -31,7 +31,6 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #000;
     }
     canvas {
       display: block;
@@ -58,13 +57,13 @@
     }
     .hud-combo {
       text-align: center;
-      font-size: 34px;
+      font-size: 36px;
       font-weight: 800;
       letter-spacing: 2px;
     }
     .hud-combo span {
       font-size: 13px;
-      font-weight: normal;
+      font-weight: 400;
       display: block;
       opacity: 0.8;
       letter-spacing: 1px;
@@ -85,13 +84,13 @@
       gap: 16px;
     }
     .btn {
-      padding: 12px 40px;
+      padding: 12px 42px;
       background: linear-gradient(135deg, #1e69ff, #00c6ff);
       border: none;
       border-radius: 28px;
       color: #fff;
       font-size: 18px;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 18px rgba(0, 198, 255, 0.35);
     }
@@ -136,7 +135,7 @@
     <p style="color: #8fa3b0; font-size: 14px;">Cryogenic [IN Lv.15]</p>
     <button class="btn" id="start-btn">开始游玩</button>
     <div class="file-input-group">
-      <span>若离线沙盒未直接读到文件，请手动选择同目录资源：</span>
+      <span>离线环境备选：</span>
       <input type="file" id="manual-files" multiple accept=".json,.ogg,.mp3,.png">
     </div>
   </div>
@@ -156,7 +155,6 @@
     let audioSource = null;
     let startTime = 0;
     let isPlaying = false;
-
     let chartData = null;
     let bgImg = new Image();
     let bgLoaded = false;
@@ -169,7 +167,6 @@
     let totalNotes = 0;
 
     let W = 0, H = 0, scale = 1;
-
     function resize() {
       W = window.innerWidth;
       H = window.innerHeight;
@@ -185,7 +182,7 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // --- 打击音效合成器 ---
+    // 音效发生器
     function playHitSound(type) {
       if (!audioCtx) return;
       try {
@@ -197,19 +194,19 @@
 
         if (type === 1) { // Tap
           osc.type = "sine";
-          osc.frequency.setValueAtTime(1200, t);
-          osc.frequency.exponentialRampToValueAtTime(300, t + 0.045);
+          osc.frequency.setValueAtTime(1400, t);
+          osc.frequency.exponentialRampToValueAtTime(300, t + 0.04);
           gain.gain.setValueAtTime(0.7, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
           osc.start(t);
-          osc.stop(t + 0.045);
+          osc.stop(t + 0.04);
         } else if (type === 2) { // Drag
           osc.type = "triangle";
           osc.frequency.setValueAtTime(750, t);
-          gain.gain.setValueAtTime(0.4, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
           osc.start(t);
-          osc.stop(t + 0.03);
+          osc.stop(t + 0.025);
         } else if (type === 4) { // Flick
           osc.type = "sawtooth";
           osc.frequency.setValueAtTime(900, t);
@@ -260,7 +257,7 @@
       }
     });
 
-    // --- 严谨谱面解析 ---
+    // --- 严谨官方标准解析与预积分 ---
     let parsedLines = [];
 
     function prepareChart() {
@@ -272,16 +269,49 @@
         const tickToSec = (tick) => (tick / 32) * (60 / bpm);
         const secToTick = (sec) => (sec / (60 / bpm)) * 32;
 
-        const speedEvents = (line.speedEvents || []).map(e => ({
-          startTime: e.startTime,
-          endTime: e.endTime,
-          value: e.value,
-          floorPos: e.floorPosition || 0
-        }));
+        // 1. 构建速度积分表 (前缀和积分，严格对应每个 SpeedEvent 起始点的真实 floorPosition)
+        let accumulatedFloor = 0;
+        const speedEvents = (line.speedEvents || []).map((e) => {
+          const startFloor = accumulatedFloor;
+          const duration = e.endTime - e.startTime;
+          // 官方规范：每 32 ticks 对应 (value) 单位位移，时间因子按标准 BPM/速度换算
+          // 官方公式中 Note 的 floorPosition 导出规则为：dt / 32 * value * (60/bpm) 或标准归一化单位
+          // 这里通过谱面实际给出的值，严格还原每 tick 的位移增量：
+          const deltaFloor = (duration / 32) * (e.value / (bpm / 60)); 
+          accumulatedFloor += deltaFloor;
+          return {
+            startTime: e.startTime,
+            endTime: e.endTime,
+            value: e.value,
+            startFloor: startFloor,
+            endFloor: accumulatedFloor
+          };
+        });
+
+        // 二分/查找当前 Tick 的真实 floorPosition
+        function getFloorPosAtTick(tick) {
+          if (speedEvents.length === 0) return 0;
+          if (tick <= speedEvents[0].startTime) return 0;
+          const last = speedEvents[speedEvents.length - 1];
+          if (tick >= last.endTime) return last.endFloor;
+
+          for (let i = 0; i < speedEvents.length; i++) {
+            const ev = speedEvents[i];
+            if (tick >= ev.startTime && tick <= ev.endTime) {
+              const p = (tick - ev.startTime) / (ev.endTime - ev.startTime || 1);
+              return ev.startFloor + (ev.endFloor - ev.startFloor) * p;
+            }
+          }
+          return 0;
+        }
 
         function formatNotes(notes, isAbove) {
           return (notes || []).map(n => {
             totalNotes++;
+            // 如果 JSON 自带 floorPosition 则使用原生，否则从速度表精确计算
+            const startFloor = (n.floorPosition !== undefined) ? n.floorPosition : getFloorPosAtTick(n.time);
+            const endFloor = getFloorPosAtTick(n.time + (n.holdTime || 0));
+
             return {
               type: n.type,
               time: n.time,
@@ -290,7 +320,8 @@
               holdTimeSec: tickToSec(n.holdTime || 0),
               x: n.positionX,
               speed: n.speed || 1.0,
-              floorPosition: n.floorPosition,
+              startFloor: startFloor,
+              endFloor: endFloor,
               isAbove: isAbove,
               hit: false,
               miss: false,
@@ -304,16 +335,15 @@
           bpm: bpm,
           tickToSec: tickToSec,
           secToTick: secToTick,
+          getFloorPosAtTick: getFloorPosAtTick,
           moveEvents: line.judgeLineMoveEvents || [],
           rotateEvents: line.judgeLineRotateEvents || [],
-          disappearEvents: line.judgeLineDisappearEvents || [], // 关键：解析透明度事件
-          speedEvents: speedEvents,
+          disappearEvents: line.judgeLineDisappearEvents || [],
           notes: [...formatNotes(line.notesAbove, true), ...formatNotes(line.notesBelow, false)]
         };
       });
     }
 
-    // 严谨区间插值 (Clamp)
     function evalNumberEvent(events, curTick, defaultVal) {
       if (!events || events.length === 0) return defaultVal;
       if (curTick <= events[0].startTime) return events[0].start;
@@ -349,25 +379,7 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    // 获取判定线当前的累计 floorPosition
-    function getLineFloorPosition(speedEvents, curTick) {
-      if (!speedEvents || speedEvents.length === 0) return curTick * 0.01;
-      let pos = 0;
-      for (let i = 0; i < speedEvents.length; i++) {
-        const ev = speedEvents[i];
-        if (curTick >= ev.endTime) {
-          pos += (ev.endTime - ev.startTime) * (ev.value / 32);
-        } else if (curTick >= ev.startTime) {
-          pos += (curTick - ev.startTime) * (ev.value / 32);
-          return pos;
-        } else {
-          break;
-        }
-      }
-      return pos;
-    }
-
-    // --- 触控响应逻辑 ---
+    // --- 触控交互处理 ---
     const activeTouches = new Map();
 
     window.addEventListener('pointerdown', (e) => {
@@ -474,7 +486,6 @@
       if (bgLoaded) {
         ctx.save();
         ctx.globalAlpha = 0.35;
-        // 居中等比裁剪填充
         const imgRatio = bgImg.width / bgImg.height;
         const screenRatio = W / H;
         let dw, dh, dx, dy;
@@ -497,9 +508,10 @@
         const curTick = line.secToTick(curSec);
         const linePos = evalMoveEvent(line.moveEvents, curTick);
         const rotDeg = evalNumberEvent(line.rotateEvents, curTick, 0);
-        // 核心：读取判定线不透明度（默认值为 1.0）
         const lineAlpha = evalNumberEvent(line.disappearEvents, curTick, 1.0);
-        const curFloorPos = getLineFloorPosition(line.speedEvents, curTick);
+        
+        // 判定线当前的绝对物理位置
+        const curFloorPos = line.getFloorPosAtTick(curTick);
 
         const lx = linePos.x * W;
         const ly = (1.0 - linePos.y) * H;
@@ -508,7 +520,7 @@
         ctx.translate(lx, ly);
         ctx.rotate((rotDeg * Math.PI) / 180);
 
-        // 判定线：透明度大于 0.01 才渲染，杜绝满屏多余白线
+        // 仅在透明度 > 0 时绘制判定线
         if (lineAlpha > 0.01) {
           ctx.save();
           ctx.globalAlpha = lineAlpha;
@@ -516,7 +528,6 @@
           ctx.lineWidth = 3.5 * scale;
           ctx.shadowColor = '#ffffff';
           ctx.shadowBlur = 4 * scale;
-          // 标准定长判定线（约占据屏幕宽度的 65%）
           const halfLineLen = W * 0.35;
           ctx.beginPath();
           ctx.moveTo(-halfLineLen, 0);
@@ -529,20 +540,26 @@
         line.notes.forEach(note => {
           if (note.hit) return;
 
+          // 超时判定
           if (curSec - note.timeSec > 0.18 && !note.hit && !note.miss) {
             note.miss = true;
             registerMiss();
             return;
           }
 
-          // 音符基于 floorPosition 的下落距离
-          const floorDiff = note.floorPosition - curFloorPos;
-          const dist = floorDiff * 140 * scale;
+          // 核心修复点：精确的时间窗口过滤与物理落距计算
+          const timeToHit = note.timeSec - curSec;
+          // 只有离击打时间在 -0.2s 到 2.2s 内的才需要处理，杜绝提前倒下来
+          if (timeToHit < -0.25 || timeToHit > 2.2) return;
+
+          // 落差比例严格缩放
+          const floorDiff = note.startFloor - curFloorPos;
+          const dist = floorDiff * 380 * scale; // 调整为真实的音符流速系数
           const noteY = note.isAbove ? -dist : dist;
           const noteX = (note.x / 9) * (W * 0.42);
 
-          // 超出可视范围不渲染
-          if (Math.abs(dist) > H * 1.3) return;
+          // 超出屏幕视野上下边界不绘制
+          if (Math.abs(noteY) > H * 1.2) return;
 
           ctx.save();
           ctx.translate(noteX, noteY);
@@ -555,7 +572,7 @@
             ctx.beginPath();
             ctx.roundRect(-nw / 2, -nh / 2, nw, nh, 3 * scale);
             ctx.fill();
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 1.5 * scale;
             ctx.stroke();
           } else if (note.type === 2) { // Drag
@@ -563,19 +580,18 @@
             ctx.beginPath();
             ctx.roundRect(-nw / 2.2, -nh / 2.5, nw / 1.1, nh / 1.25, 3 * scale);
             ctx.fill();
-          } else if (note.type === 3) { // Hold: 修正尾端朝向与长度
-            const holdFloorSpan = (note.holdTime / 32) * (60 / line.bpm) * (note.speed || 1.0) * 12;
-            const holdLen = holdFloorSpan * 140 * scale;
+          } else if (note.type === 3) { // Hold: 身体长度也基于 floorSpan
+            const floorSpan = Math.max(0.01, note.endFloor - note.startFloor);
+            const holdLen = floorSpan * 380 * scale;
 
-            // 长条主体：根据 isAbove 正确向来向延伸
-            ctx.fillStyle = 'rgba(3, 169, 244, 0.32)';
+            ctx.fillStyle = 'rgba(3, 169, 244, 0.35)';
             if (note.isAbove) {
               ctx.fillRect(-nw / 2, -holdLen, nw, holdLen);
             } else {
               ctx.fillRect(-nw / 2, 0, nw, holdLen);
             }
 
-            // 头部
+            // 头部打击线
             ctx.fillStyle = '#03a9f4';
             ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
 
@@ -604,7 +620,7 @@
     document.getElementById('start-btn').addEventListener('click', async () => {
       await initAudio();
       if (!chartData) {
-        alert("未读取到谱面文件，请手动选择！");
+        alert("未读取到谱面文件，请使用手动文件选取！");
         return;
       }
       prepareChart();
