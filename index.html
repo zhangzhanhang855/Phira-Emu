@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Phira Pure Engine - Perfect Alignment</title>
+  <title>Phira Pure Engine - Autoplay Edition</title>
   <style>
     * {
       box-sizing: border-box;
@@ -152,6 +152,20 @@
       cursor: pointer;
       width: 120px;
     }
+    .toggle-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .toggle-btn.active {
+      background: #00e5ff;
+      color: #000;
+      font-weight: bold;
+    }
     input[type="file"] {
       display: none;
     }
@@ -228,6 +242,7 @@
         <div id="song-name" style="font-weight: bold; font-size: 18px;">曲目名称</div>
         <div id="song-desc" style="opacity: 0.7; font-size: 13px;">等待载入...</div>
       </div>
+      <!-- 连击显示区域：严格保留 COMBO 字样与连击数 -->
       <div class="hud-combo">
         <div id="combo-num">0</div>
         <span>COMBO</span>
@@ -267,6 +282,11 @@
         <input type="range" id="size-slider" min="0.6" max="2.2" step="0.05" value="1.25">
         <span id="size-val" style="color:#00e5ff; font-weight:bold;">1.25x</span>
       </div>
+      <!-- Autoplay 切换按钮 -->
+      <div class="slider-box">
+        <span>自动游玩 (Autoplay):</span>
+        <button class="toggle-btn" id="autoplay-btn">关 (OFF)</button>
+      </div>
     </div>
 
     <div id="status-text">请先导入谱面 ZIP 包</div>
@@ -304,12 +324,22 @@
     let isPlaying = false;
     let isEnded = false;
 
+    // 自定义配置
     let userNoteScale = 1.25;
+    let isAutoplay = false; // 自动游玩开关
+
     const sizeSlider = document.getElementById('size-slider');
     const sizeVal = document.getElementById('size-val');
     sizeSlider.oninput = (e) => {
       userNoteScale = parseFloat(e.target.value);
       sizeVal.innerText = userNoteScale.toFixed(2) + "x";
+    };
+
+    const autoplayBtn = document.getElementById('autoplay-btn');
+    autoplayBtn.onclick = () => {
+      isAutoplay = !isAutoplay;
+      autoplayBtn.classList.toggle('active', isAutoplay);
+      autoplayBtn.innerText = isAutoplay ? "开 (ON)" : "关 (OFF)";
     };
 
     let songMeta = {
@@ -557,7 +587,7 @@
       }
     }
 
-    // --- 极速预处理与时序队列化 ---
+    // --- 谱面数据与速度积分表构建 ---
     function prepareChart() {
       if (!ASSETS.chartJson || !ASSETS.chartJson.judgeLineList) return;
       totalNotes = 0;
@@ -576,12 +606,10 @@
         const tickToSec = (tick) => (tick / 32) * (60 / bpm);
         const secToTick = (sec) => (sec / (60 / bpm)) * 32;
 
-        // 核心：严格按照官方规范积分，保证与 note.floorPosition 尺标 100% 吻合
         let accumulatedFloor = 0;
         const speedEvents = (line.speedEvents || []).map(e => {
           const startFloor = accumulatedFloor;
           const duration = e.endTime - e.startTime;
-          // 官方换算率：dt / 32 * value / (bpm / 60)
           const deltaFloor = (duration / 32) * (e.value / (bpm / 60));
           accumulatedFloor += deltaFloor;
           return {
@@ -612,7 +640,6 @@
         function formatNotes(notes, isAbove) {
           return (notes || []).map(n => {
             totalNotes++;
-            // 优先使用官方烘焙的绝对 floorPosition
             const startFloor = (n.floorPosition !== undefined) ? n.floorPosition : getFloorPosAtTick(n.time);
             const endFloor = getFloorPosAtTick(n.time + (n.holdTime || 0));
             const isMulti = (timeCount.get(Math.round(n.time)) || 0) >= 2;
@@ -692,14 +719,11 @@
       return { x: 0.5, y: 0.5 };
     }
 
-    // 核心物理映射：基于时间流向进行单调锁定，绝不倒立！
     function computeNoteLocalY(note, curFloorPos, curSec) {
       const dt = note.timeSec - curSec;
       const rawFloorDiff = Math.abs(note.startFloor - curFloorPos);
       const dist = rawFloorDiff * 380 * scale;
 
-      // 核心锁死：尚未打击时 (dt >= 0)，上方音符绝对锁定在负Y（上方），下方音符在正Y（下方）！
-      // 穿过判定线后 (dt < 0)，自然穿透判定线离开
       let y = 0;
       if (note.isAbove) {
         y = (dt >= 0) ? -dist : dist;
@@ -709,11 +733,63 @@
       return y;
     }
 
-    // --- 触控引擎与打击判定 ---
+    // --- 自动游玩 (Autoplay) 核心执行器 ---
+    function updateAutoplay(curTime) {
+      if (!isAutoplay) return;
+
+      for (let l = 0; l < parsedLines.length; l++) {
+        const line = parsedLines[l];
+        const curTick = line.secToTick(curTime);
+        const linePos = evalMoveEvent(line.moveEvents, curTick);
+        const rotDeg = evalNumberEvent(line.rotateEvents, curTick, 0);
+
+        const lx = linePos.x * W;
+        const ly = (1.0 - linePos.y) * H;
+        const rad = (-rotDeg * Math.PI) / 180;
+        const cosR = Math.cos(rad);
+        const sinR = Math.sin(rad);
+
+        const notes = line.notes;
+        const startIdx = line.activeNoteHeadIndex;
+
+        for (let i = startIdx; i < notes.length; i++) {
+          const note = notes[i];
+          if (note.hit || note.miss) continue;
+
+          // 尚未到来的音符无需提前处理
+          if (note.timeSec - curTime > 0.005) break;
+
+          const noteLocalX = (note.x / 9) * (W * 0.42);
+          const hitWorldX = lx + noteLocalX * cosR;
+          const hitWorldY = ly + noteLocalX * -sinR;
+
+          // 单击、滑动、划键：准时触线瞬间 Perfect 消除
+          if (note.type === 1 || note.type === 2 || note.type === 4) {
+            note.hit = true;
+            playHitSound(note.type);
+            registerHit(1.0);
+            spawnHitFX(hitWorldX, hitWorldY, true);
+          }
+          // 长条：准时触线起手激活
+          else if (note.type === 3) {
+            if (!note.headHit) {
+              note.headHit = true;
+              note.holding = true;
+              note.lastTouchTime = curTime;
+              playHitSound(1);
+              spawnHitFX(hitWorldX, hitWorldY, true);
+            }
+          }
+        }
+      }
+    }
+
+    // --- 触控引擎与打击判定 (手动游玩模式) ---
     const activeTouches = new Map();
 
     window.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      if (isAutoplay) return;
       activeTouches.set(e.pointerId, {
         x: e.clientX,
         y: e.clientY,
@@ -726,6 +802,7 @@
 
     window.addEventListener('pointermove', (e) => {
       e.preventDefault();
+      if (isAutoplay) return;
       if (activeTouches.has(e.pointerId)) {
         const p = activeTouches.get(e.pointerId);
         const dx = e.clientX - p.lastX;
@@ -748,7 +825,7 @@
     window.addEventListener('pointercancel', onPointerUp);
 
     function checkHits(screenX, screenY, inputType) {
-      if (!isPlaying) return;
+      if (!isPlaying || isAutoplay) return;
       const curTime = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
 
       for (let l = 0; l < parsedLines.length; l++) {
@@ -819,7 +896,7 @@
       }
     }
 
-    // 严谨修复：Hold 持续按压跟踪（彻底根除按压 0.5s 消失的问题）
+    // 严谨跟踪 Hold 持续按压
     function updateHoldingStates(curTime) {
       for (let l = 0; l < parsedLines.length; l++) {
         const line = parsedLines[l];
@@ -841,7 +918,6 @@
           if (note.timeSec - curTime > 0.5) break;
           if (note.type !== 3 || !note.headHit || note.hit || note.miss) continue;
 
-          // 还在击打起手点之前不计
           if (curTime < note.timeSec) continue;
 
           // 长条完整走完自然结算
@@ -857,16 +933,20 @@
           const horizThreshold = 160 * scale * userNoteScale;
           const vertThreshold = 180 * scale * userNoteScale;
 
-          let isTouchCovering = false;
-          for (let [id, touch] of activeTouches) {
-            const dx = touch.x - lx;
-            const dy = touch.y - ly;
-            const tX = dx * cosR - dy * sinR;
-            const tY = dx * sinR + dy * cosR;
+          // Autoplay 模式下长条永远自动完美按压
+          let isTouchCovering = isAutoplay;
 
-            if (Math.abs(tX - noteLocalX) < horizThreshold && Math.abs(tY) < vertThreshold) {
-              isTouchCovering = true;
-              break;
+          if (!isTouchCovering) {
+            for (let [id, touch] of activeTouches) {
+              const dx = touch.x - lx;
+              const dy = touch.y - ly;
+              const tX = dx * cosR - dy * sinR;
+              const tY = dx * sinR + dy * cosR;
+
+              if (Math.abs(tX - noteLocalX) < horizThreshold && Math.abs(tY) < vertThreshold) {
+                isTouchCovering = true;
+                break;
+              }
             }
           }
 
@@ -881,7 +961,6 @@
               spawnHitFX(hitWorldX, hitWorldY, true);
             }
           } else {
-            // 0.45 秒断触宽容缓冲，保证绝不会中途按着按着突然消失
             if (curTime - note.lastTouchTime > 0.45) {
               note.holding = false;
               note.miss = true;
@@ -958,6 +1037,8 @@
       const now = performance.now();
       const curSec = (audioCtx.currentTime - startTime) + (songMeta.offset || 0);
 
+      // 驱动自动游玩
+      updateAutoplay(curSec);
       updateHoldingStates(curSec);
 
       ctx.clearRect(0, 0, W, H);
@@ -1030,25 +1111,24 @@
           const note = notes[i];
           if (note.hit) continue;
 
-          // 普通单点超时判定 (Hold 绝不进入此处)
-          if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
-            note.miss = true;
-            registerMiss();
-            continue;
-          }
-
-          // 未触碰 Hold 超时判定
-          if (note.type === 3 && !note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
-            note.miss = true;
-            registerMiss();
-            continue;
+          // 手动游玩下的超时判定
+          if (!isAutoplay) {
+            if (note.type !== 3 && curSec - note.timeSec > 0.18 && !note.miss) {
+              note.miss = true;
+              registerMiss();
+              continue;
+            }
+            if (note.type === 3 && !note.headHit && curSec - note.timeSec > 0.18 && !note.miss) {
+              note.miss = true;
+              registerMiss();
+              continue;
+            }
           }
 
           const timeToHit = note.timeSec - curSec;
           if (timeToHit > 2.0) break;
           if (timeToHit < -0.25 && note.type !== 3) continue;
 
-          // 核心单调物理落差计算：彻底消除上下颠倒
           const noteY = computeNoteLocalY(note, curFloorPos, curSec);
           const noteX = (note.x / 9) * (W * 0.42);
 
