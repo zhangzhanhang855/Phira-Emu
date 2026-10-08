@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>ADOFAI Auto Player - Cecilia</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #0a0b10;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #canvas-container {
+      position: relative;
+      flex: 1;
+      width: 100vw;
+      height: 100vh;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* 悬浮 HUD 控制面板 */
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: rgba(18, 20, 29, 0.75);
+      backdrop-filter: blur(8px);
+      padding: 10px 18px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    button, label.btn {
+      background: linear-gradient(135deg, #ff4757, #ff6b81);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.35);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button:hover, label.btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 71, 87, 0.55);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+    }
+    #status {
+      font-size: 13px;
+      color: #70a1ff;
+      font-weight: bold;
+      min-width: 150px;
+    }
+    #stats-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(18, 20, 29, 0.6);
+      backdrop-filter: blur(6px);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #a4b0be;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+      line-height: 1.6;
+    }
+    #stats-panel b { color: #fff; }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container">
+    <canvas id="view"></canvas>
+
+    <div id="hud">
+      <button id="play-btn" onclick="togglePlay()">▶ 开始打击</button>
+      <button class="btn-secondary" onclick="resetPlay()">↺ 重置</button>
+      <label class="btn btn-secondary">
+        📂 导入其他 .adofai
+        <input type="file" id="file-input" accept=".adofai,.json,.txt" style="display: none;">
+      </label>
+      <div id="status">Floor: 0 / 0 | 73.3 BPM</div>
+    </div>
+
+    <div id="stats-panel">
+      曲目: <b id="song-name">Cecilia</b><br>
+      作者: <b id="song-author">Windycloud</b><br>
+      判定: <span style="color:#2ed573; font-weight:bold;">100% PERFECT</span>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------------------
+    // 1. Cecilia 关卡数据嵌入 (直接包含你的完整数据)
+    // -------------------------------------------------------------------------
+    let defaultLevel = {
+      angleData: [0, 60, 0, 60, 120, 180, 240, 300, 0, 60, 0, 60, 0, 60, 120, 180, 120, 180, 120, 60, 0, 60, 0, 60, 120, 180, 120, 120, 0, 240, 120, 180, 120, 60, 0, 300, 240, 180, 120, 180, 120, 180, 90, 0, -180, 90, 0, 0, 0, 0, 90, 180, 270, 0, 0, 90, 180, 90, 0, 90, 180, 0, 90, 180, 180, 180, 90, 0, -180, 90, 0, 0, 0, 90, 180, 0, 90, 180, 180, 180, 180, 90, 180, 90, 0, -180, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 180, 0, 60, 120, 180, 7.5, 60, 120, 180, 0, 60, 120, 180, 352.5, 60, 120, 60, 120, 180, 0, 60, 120, 180, 352.5, 60, 120, 180, 120, 60, 0, -180, 120, 60, -112.5, 180, 7.5, 60, 120, 60, 0, -180, 120, 60, 0, 172.5, 120, 60, 0, -180, 120, 60, 0, -172.5, 120, 60, 120, 60, 0, -180, 120, 60, 0, -172.5, 120, 60, 0, 60, 120, 180, 120, 60, 120, 292.5, 0, 172.5, 0, 90, 180, 90, 180, 90, 0, 0, 0, 0, 90, 0, 90, 180, 0, 90, 180, 0, 90, 180, 180, 180, 180, 90, 180, 180, 180, 180, 0, 90, 180, 180, 180, 180, 90, 180, 90, 0, 90, 180, 90, 0, 90, 180, 135, 270, 0, 90, 180, 90, 0, 60, 0, 60, 120, 180, 240, 300, 0, 60, 0, 60, 0, 60, 120, 180, 120, 180, 120, 60, 0, 60, 0, 60, 120, 180, 120, 120, 0, 240, 120, 180, 120, 60, 0, 300, 240, 180, 120, 180, 120, 180, 90, 0, -180, 90, 0, 0, 0, 0, 90, 180, 270, 0, 0, 90, 180, 90, 0, 90, 180, 0, 90, 180, 180, 180, 90, 0, -180, 90, 0, 0, 0, 90, 180, 0, 90, 180, 180, 180, 180, 90, 180, 90, 0, -180, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 180, 0, 60, 120, 180, 7.5, 60, 120, 180, 0, 60, 120, 180, 352.5, 60, 120, 60, 120, 180, 0, 60, 120, 180, 345, 0, 0, 0, 0, 0, 0, -180, 120, 60, -112.5, 180, 7.5, 60, 120, 60, 0, -180, 120, 60, 0, 172.5, 120, 60, 0, -180, 120, 60, 0, -172.5, 120, 60, 120, 60, 0, -180, 120, 60, 0, -165, 180, 180, 180, 180, 180, 180, 120, 60, 120, 292.5, 0, 172.5, 0, 60, 120, 180, 352.5, 60, 120, 180, 120, 60, 0, -172.5, 120, 60, 0, 60, 120, 292.5, 0, -172.5, 120, 60, 0, 60, 120, 292.5, 0, -172.5, 120, 60, 0, 60, 120, 180, 352.5, 60, 120, 180, 120, 60, 0, 165, 120, 60, 0, 60, 120, -45, 0, -172.5, 120, 60, 0, 60, 120, 292.5, 0, -172.5, 120, 60, 0, 60, 120, 180, 352.5, 60, 120, 180, 120, 60, 0, -172.5, 120, 60, 0, 60, 120, 292.5, 0, -172.5, 120, 60, 0, 60, 120, 292.5, 0, -172.5, 120, 60, 0, 60, 120, 180, 352.5, 60, 120, 180, 120, 60, 0, 165, 120, 60, 0, 60, 120, -45, 0, -172.5, 120, 60, 0, 60, 120, 292.5, 0, -172.5, 120, 60, 0, 60, 120, 180, 0, 90, 180, 180, 180, 180, 90, 0, 270, 180, 180, 90, 0, 90, 180, 90, 0, -180, 90, 0, 0, 0, 90, 180, 0, 90, 180, 180, 180, 90, 0, -180, 90, 0, 0, 0, 0, 90, 0, 90, 180, 0, 90, 180, 180, 180, 180, 180, 180, 180, 90, 0, 90, 180, 90, 0, 90, 180, 90, 0, 90, 180],
+      settings: { bpm: 73.33334, song: "Cecilia", author: "Windycloud" },
+      actions: [
+        { floor: 16, eventType: "Twirl" }, { floor: 21, eventType: "Twirl" }, { floor: 26, eventType: "Twirl" },
+        { floor: 42, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 110 },
+        { floor: 50, eventType: "Twirl" }, { floor: 57, eventType: "Twirl" }, { floor: 59, eventType: "Twirl" },
+        { floor: 66, eventType: "Twirl" }, { floor: 73, eventType: "Twirl" }, { floor: 83, eventType: "Twirl" },
+        { floor: 91, eventType: "Twirl" },
+        { floor: 101, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 146.6667 },
+        { floor: 105, eventType: "Twirl" }, { floor: 109, eventType: "Twirl" }, { floor: 127, eventType: "Twirl" },
+        { floor: 144, eventType: "Twirl" }, { floor: 148, eventType: "Twirl" }, { floor: 166, eventType: "Twirl" },
+        { floor: 174, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 110 },
+        { floor: 180, eventType: "Twirl" }, { floor: 187, eventType: "Twirl" },
+        { floor: 211, eventType: "Twirl" }, { floor: 213, eventType: "Twirl" }, { floor: 215, eventType: "Twirl" }, { floor: 217, eventType: "Twirl" },
+        { floor: 219, eventType: "SetSpeed", speedType: "Multiplier", bpmMultiplier: 0.5 },
+        { floor: 226, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 73.33334 },
+        { floor: 241, eventType: "Twirl" }, { floor: 246, eventType: "Twirl" }, { floor: 251, eventType: "Twirl" },
+        { floor: 267, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 110 },
+        { floor: 275, eventType: "Twirl" }, { floor: 282, eventType: "Twirl" }, { floor: 284, eventType: "Twirl" },
+        { floor: 291, eventType: "Twirl" }, { floor: 298, eventType: "Twirl" }, { floor: 308, eventType: "Twirl" },
+        { floor: 316, eventType: "Twirl" },
+        { floor: 326, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 146.6667 },
+        { floor: 330, eventType: "Twirl" }, { floor: 334, eventType: "Twirl" },
+        { floor: 348, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 220 },
+        { floor: 354, eventType: "Twirl" },
+        { floor: 355, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 146.6667 },
+        { floor: 369, eventType: "Twirl" }, { floor: 373, eventType: "Twirl" },
+        { floor: 387, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 220 },
+        { floor: 393, eventType: "Twirl" },
+        { floor: 394, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 146.6667 },
+        { floor: 408, eventType: "Twirl" }, { floor: 415, eventType: "Twirl" }, { floor: 419, eventType: "Twirl" },
+        { floor: 423, eventType: "Twirl" }, { floor: 427, eventType: "Twirl" }, { floor: 431, eventType: "Twirl" },
+        { floor: 438, eventType: "Twirl" },
+        { floor: 441, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 293.3333 }, { floor: 441, eventType: "Twirl" },
+        { floor: 445, eventType: "Twirl" },
+        { floor: 449, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 146.6667 },
+        { floor: 453, eventType: "Twirl" }, { floor: 457, eventType: "Twirl" }, { floor: 461, eventType: "Twirl" },
+        { floor: 468, eventType: "Twirl" }, { floor: 475, eventType: "Twirl" }, { floor: 479, eventType: "Twirl" },
+        { floor: 483, eventType: "Twirl" }, { floor: 487, eventType: "Twirl" }, { floor: 491, eventType: "Twirl" },
+        { floor: 498, eventType: "Twirl" },
+        { floor: 501, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 293.3333 }, { floor: 501, eventType: "Twirl" },
+        { floor: 505, eventType: "Twirl" },
+        { floor: 509, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 146.6667 },
+        { floor: 513, eventType: "Twirl" }, { floor: 517, eventType: "Twirl" }, { floor: 521, eventType: "Twirl" },
+        { floor: 524, eventType: "SetSpeed", speedType: "Bpm", beatsPerMinute: 110 },
+        { floor: 530, eventType: "Twirl" }, { floor: 537, eventType: "Twirl" }, { floor: 539, eventType: "Twirl" },
+        { floor: 546, eventType: "Twirl" }, { floor: 553, eventType: "Twirl" }, { floor: 563, eventType: "Twirl" },
+        { floor: 574, eventType: "Twirl" }, { floor: 576, eventType: "Twirl" }, { floor: 578, eventType: "Twirl" },
+        { floor: 580, eventType: "Twirl" }, { floor: 582, eventType: "Twirl" }, { floor: 584, eventType: "Twirl" }
+      ]
+    };
+
+    // -------------------------------------------------------------------------
+    // 2. Web Audio 合成音效（清脆木块打击音）
+    // -------------------------------------------------------------------------
+    let audioCtx = null;
+    function playHitSound() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.05);
+
+      gain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.07);
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. 几何与路径计算
+    // -------------------------------------------------------------------------
+    let tiles = [];
+    const TRACK_RADIUS = 1.0; // 真实半径基准：1个单位
+
+    function buildTiles(data) {
+      tiles = [];
+      let x = 0, y = 0;
+      tiles.push({ floor: 0, x: 0, y: 0, inAngle: 0, exitAngle: (data.angleData[0] || 0) });
+
+      let currentBPM = data.settings.bpm || 100;
+      let isClockwise = true; // ADOFAI 默认顺时针
+
+      for (let i = 0; i < data.angleData.length; i++) {
+        let deg = data.angleData[i];
+        let rad = (deg * Math.PI) / 180;
+        x += Math.cos(rad);
+        y -= Math.sin(rad); // 屏幕坐标反向
+
+        let floorNum = i + 1;
+        // 查找本格 Actions
+        const actions = (data.actions || []).filter(a => a.floor === floorNum);
+        for (let a of actions) {
+          if (a.eventType === "Twirl") isClockwise = !isClockwise;
+          if (a.eventType === "SetSpeed") {
+            if (a.speedType === "Bpm") currentBPM = a.beatsPerMinute;
+            else if (a.speedType === "Multiplier") currentBPM *= a.bpmMultiplier;
+          }
+        }
+
+        tiles.push({
+          floor: floorNum,
+          x, y,
+          inAngle: deg,
+          exitAngle: (i + 1 < data.angleData.length ? data.angleData[i + 1] : deg),
+          bpm: currentBPM,
+          clockwise: isClockwise,
+          actions: actions
+        });
+      }
+    }
+
+    // 计算相邻方块之间的旋转弧度差 (考虑顺/逆时针)
+    function getSweepRadian(entryDeg, exitDeg, clockwise) {
+      let diff = exitDeg - entryDeg;
+      while (diff <= -180) diff += 360;
+      while (diff > 180) diff -= 360;
+
+      // 顺时针与逆时针的角度补正
+      let degDist = 180 - diff;
+      if (!clockwise) {
+        degDist = 180 + diff;
+      }
+      while (degDist <= 0) degDist += 360;
+      return (degDist * Math.PI) / 180;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. 特效系统 (Particles, Shockwaves, Shake)
+    // -------------------------------------------------------------------------
+    let shockwaves = [];
+    let particles = [];
+    let texts = [];
+    let redTrail = [];
+    let blueTrail = [];
+    let screenShake = 0;
+
+    function createHitVFX(x, y, color) {
+      screenShake = 3.5; // 命中震屏
+
+      // 1. 冲击波
+      shockwaves.push({ x, y, radius: 0.15, maxRadius: 1.6, alpha: 1, color });
+
+      // 2. 击打火花粒子
+      for (let i = 0; i < 18; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 2 + Math.random() * 5;
+        particles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          size: 2.5 + Math.random() * 3.5,
+          alpha: 1,
+          color
+        });
+      }
+
+      // 3. PERFECT 悬浮字
+      texts.push({
+        x, y: y - 0.6,
+        text: "PERFECT",
+        alpha: 1,
+        vy: -0.8
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. 自动打击与物理模拟器
+    // -------------------------------------------------------------------------
+    let isPlaying = false;
+    let currentFloor = 0;
+    let currentPhase = 0; // 0.0 ~ 1.0 (两格之间的公转进度)
+    let lastTime = 0;
+
+    let redPos = { x: 0, y: 0 };
+    let bluePos = { x: 0, y: 0 };
+    let camera = { x: 0, y: 0, zoom: 70 };
+
+    function resetPlay() {
+      isPlaying = false;
+      currentFloor = 0;
+      currentPhase = 0;
+      shockwaves = [];
+      particles = [];
+      texts = [];
+      redTrail = [];
+      blueTrail = [];
+      document.getElementById("play-btn").innerText = "▶ 开始打击";
+
+      if (tiles.length > 0) {
+        // 初始位置：蓝球在 0 号格，红球水平指向右侧
+        bluePos = { x: tiles[0].x, y: tiles[0].y };
+        redPos = { x: tiles[0].x + TRACK_RADIUS, y: tiles[0].y };
+        camera.x = tiles[0].x;
+        camera.y = tiles[0].y;
+      }
+      updateStatusHUD();
+    }
+
+    function togglePlay() {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      isPlaying = !isPlaying;
+      document.getElementById("play-btn").innerText = isPlaying ? "⏸ 暂停" : "▶ 继续打击";
+      lastTime = performance.now();
+    }
+
+    function updateSimulation(dt) {
+      if (!isPlaying || currentFloor >= tiles.length - 1) return;
+
+      const currTile = tiles[currentFloor];
+      const nextTile = tiles[currentFloor + 1];
+
+      // 根据 BPM 计算每秒弧度：1 beat = 180度(半周) = PI rad
+      const radPerSec = (currTile.bpm / 60) * Math.PI;
+
+      // 计算从当前走向下一个 Tile 所需旋转的弧度
+      const totalRad = getSweepRadian(currTile.inAngle, nextTile.inAngle, currTile.clockwise);
+      const stepDuration = totalRad / radPerSec;
+
+      currentPhase += dt / stepDuration;
+
+      // 判定球与旋转球
+      const anchorIsBlue = (currentFloor % 2 === 0);
+      const anchor = anchorIsBlue ? bluePos : redPos;
+
+      // 起始角度：上一步的入口反向（即小球静止停靠角度）
+      const baseAngle = (currTile.inAngle * Math.PI) / 180 + Math.PI;
+      const sweepDir = currTile.clockwise ? 1 : -1;
+      const currentAngle = baseAngle + sweepDir * (currentPhase * totalRad);
+
+      const movingX = anchor.x + Math.cos(currentAngle) * TRACK_RADIUS;
+      const movingY = anchor.y - Math.sin(currentAngle) * TRACK_RADIUS;
+
+      if (anchorIsBlue) {
+        redPos.x = movingX;
+        redPos.y = movingY;
+      } else {
+        bluePos.x = movingX;
+        bluePos.y = movingY;
+      }
+
+      // 记录流光尾迹
+      redTrail.unshift({ x: redPos.x, y: redPos.y, alpha: 1 });
+      blueTrail.unshift({ x: bluePos.x, y: bluePos.y, alpha: 1 });
+      if (redTrail.length > 18) redTrail.pop();
+      if (blueTrail.length > 18) blueTrail.pop();
+
+      // 达到命中点
+      if (currentPhase >= 1.0) {
+        currentFloor++;
+        currentPhase = 0;
+
+        // 强行对齐吸附到下一个方块中心
+        if (anchorIsBlue) {
+          redPos.x = nextTile.x;
+          redPos.y = nextTile.y;
+          createHitVFX(redPos.x, redPos.y, "#ff4757");
+        } else {
+          bluePos.x = nextTile.x;
+          bluePos.y = nextTile.y;
+          createHitVFX(bluePos.x, bluePos.y, "#2ed573");
+        }
+
+        playHitSound();
+        updateStatusHUD();
+
+        if (currentFloor >= tiles.length - 1) {
+          isPlaying = false;
+          document.getElementById("play-btn").innerText = "✔ 打击完成";
+        }
+      }
+    }
+
+    function updateStatusHUD() {
+      const t = tiles[currentFloor] || tiles[0];
+      document.getElementById("status").innerText =
+        `Floor: ${currentFloor} / ${tiles.length - 1} | ${t.bpm ? t.bpm.toFixed(1) : 73.3} BPM`;
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. 渲染引擎
+    // -------------------------------------------------------------------------
+    const canvas = document.getElementById("view");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+
+    function render() {
+      ctx.fillStyle = "#0c0d14";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      // 摄像机阻尼追踪跟随激活球
+      const activeBall = (currentFloor % 2 === 0) ? redPos : bluePos;
+      camera.x += (activeBall.x - camera.x) * 0.12;
+      camera.y += (activeBall.y - camera.y) * 0.12;
+
+      // 屏幕震颤偏移
+      let shakeX = (Math.random() - 0.5) * screenShake;
+      let shakeY = (Math.random() - 0.5) * screenShake;
+      screenShake *= 0.88;
+
+      ctx.translate(canvas.width / 2 + shakeX, canvas.height / 2 + shakeY);
+      ctx.scale(camera.zoom, camera.zoom);
+      ctx.translate(-camera.x, -camera.y);
+
+      // --- A. 绘制轨道连线与轨道方块 ---
+      const TILE_SIZE = 0.72;
+      for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i];
+
+        // 视锥体粗剪裁提升绘制性能
+        if (Math.abs(t.x - camera.x) > 15 || Math.abs(t.y - camera.y) > 10) continue;
+
+        const isPassed = i <= currentFloor;
+
+        // 轨道底座
+        ctx.fillStyle = isPassed ? "rgba(222, 187, 123, 0.28)" : "#debb7b";
+        ctx.strokeStyle = isPassed ? "rgba(255, 255, 255, 0.2)" : "#ffffff";
+        ctx.lineWidth = 0.04;
+
+        // 特殊事件格子发光（例如 Twirl 格用粉紫色，BPM 用蓝白）
+        if (t.actions && t.actions.length > 0) {
+          if (t.actions.some(a => a.eventType === "Twirl")) {
+            ctx.fillStyle = isPassed ? "rgba(238, 90, 36, 0.35)" : "#ff6b81";
+          }
+        }
+
+        ctx.fillRect(t.x - TILE_SIZE / 2, t.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+        ctx.strokeRect(t.x - TILE_SIZE / 2, t.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+      }
+
+      // --- B. 绘制旋转轨道半透明引导线 (Orbit Circle) ---
+      const anchor = (currentFloor % 2 === 0) ? bluePos : redPos;
+      ctx.beginPath();
+      ctx.arc(anchor.x, anchor.y, TRACK_RADIUS, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 0.03;
+      ctx.setLineDash([0.15, 0.15]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // --- C. 绘制尾迹粒子 (Trail) ---
+      drawTrail(redTrail, "rgba(255, 71, 87, ");
+      drawTrail(blueTrail, "rgba(46, 213, 115, ");
+
+      // --- D. 绘制命中冲击波 ---
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = sw.color;
+        ctx.globalAlpha = sw.alpha;
+        ctx.lineWidth = 0.08 * sw.alpha;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+        sw.radius += 0.08;
+        sw.alpha -= 0.04;
+        if (sw.alpha <= 0) shockwaves.splice(i, 1);
+      }
+
+      // --- E. 绘制红蓝双小球 ---
+      drawBall(bluePos.x, bluePos.y, "#2ed573", "#7bed9f", (currentFloor % 2 === 0)); // 冰球(蓝绿)
+      drawBall(redPos.x, redPos.y, "#ff4757", "#ff6b81", (currentFloor % 2 !== 0)); // 火球(红)
+
+      // --- F. 击打火花粒更新与绘制 ---
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * 0.016;
+        p.y += p.vy * 0.016;
+        p.alpha -= 0.028;
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size / camera.zoom, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+      ctx.globalAlpha = 1.0;
+
+      // --- G. 浮动文字特效 ---
+      for (let i = texts.length - 1; i >= 0; i--) {
+        const txt = texts[i];
+        txt.y += txt.vy * 0.016;
+        txt.alpha -= 0.025;
+
+        ctx.font = `bold ${0.4}px -apple-system, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = `rgba(46, 213, 115, ${txt.alpha})`;
+        ctx.fillText(txt.text, txt.x, txt.y);
+
+        if (txt.alpha <= 0) texts.splice(i, 1);
+      }
+
+      ctx.restore();
+    }
+
+    function drawBall(x, y, color1, color2, isAnchor) {
+      const BALL_R = 0.28;
+
+      // 发光外圈
+      ctx.save();
+      ctx.shadowColor = color1;
+      ctx.shadowBlur = isAnchor ? 15 : 25;
+
+      ctx.beginPath();
+      ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
+      ctx.fillStyle = color1;
+      ctx.fill();
+
+      // 内芯高光
+      ctx.beginPath();
+      ctx.arc(x, y, BALL_R * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = color2;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawTrail(trail, colorPrefix) {
+      for (let i = 0; i < trail.length; i++) {
+        const t = trail[i];
+        const ratio = 1 - (i / trail.length);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 0.2 * ratio, 0, Math.PI * 2);
+        ctx.fillStyle = colorPrefix + (ratio * 0.45) + ")";
+        ctx.fill();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. 主动画循环
+    // -------------------------------------------------------------------------
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      updateSimulation(dt);
+      render();
+
+      requestAnimationFrame(loop);
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. 外部 ADOFAI 文件解析导入支持
+    // -------------------------------------------------------------------------
+    const PATH_ANGLES = {
+      'R': 0, 'p': 15, 'J': 30, 'E': 45, 'T': 60, 'c': 75,
+      'U': 90, 'C': 105, 'F': 120, 'G': 135, 'K': 150, 'q': 165,
+      'L': 180, 'o': 195, 'O': 210, 'Z': 225, 'V': 240, 'N': 255,
+      'D': 270, 'M': 285, 'B': 300, 'H': 315, 'Y': 330, 'x': 345
+    };
+
+    document.getElementById("file-input").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          let cleaned = evt.target.result.replace(/^\uFEFF/, "").replace(/\/\/.*$/gm, "").replace(/,\s*([\]}])/g, "$1");
+          const parsed = JSON.parse(cleaned);
+          if (!parsed.angleData && parsed.pathData) {
+            parsed.angleData = [];
+            for (let char of parsed.pathData) {
+              if (PATH_ANGLES[char] !== undefined) parsed.angleData.push(PATH_ANGLES[char]);
+            }
+          }
+          defaultLevel = parsed;
+          document.getElementById("song-name").innerText = parsed.settings?.song || file.name;
+          document.getElementById("song-author").innerText = parsed.settings?.author || "Unknown";
+          buildTiles(defaultLevel);
+          resetPlay();
+        } catch(err) {
+          alert("文件解析错误: " + err);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // 初始化启动
+    resize();
+    buildTiles(defaultLevel);
+    resetPlay();
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
