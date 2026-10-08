@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JR AI - Conversion Toolbox</title>
+  <!-- Tailwind CSS CDN for modern UI styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip for zip creation and packaging -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- FileSaver.js for automatic file downloading -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    .active-nav {
+      background-color: #3b82f6;
+      color: #ffffff !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950/60 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center space-x-3 cursor-pointer" onclick="navigate('/')">
+      <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30">JR</div>
+      <span class="text-xl font-semibold tracking-wide">JR AI Toolbox</span>
+    </div>
+    <span class="text-xs bg-slate-800 text-slate-400 px-3 py-1 rounded-full border border-slate-700">Client-Side Engine</span>
+  </header>
+
+  <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6">
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-72 bg-slate-800/50 rounded-2xl p-4 border border-slate-700/60 flex flex-col gap-2 h-fit">
+      <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Available Tools</div>
+      <nav id="nav-list" class="space-y-1">
+        <!-- Routes dynamically highlighted -->
+        <button onclick="navigate('/wordpdf')" data-path="/wordpdf" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>Word ⇄ PDF</span>
+          <span class="text-xs text-slate-500 font-mono">/wordpdf</span>
+        </button>
+        <button onclick="navigate('/wavmp3')" data-path="/wavmp3" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>WAV/OGG ⇄ MP3/FLAC</span>
+          <span class="text-xs text-slate-500 font-mono">/wavmp3</span>
+        </button>
+        <button onclick="navigate('/ncmflac')" data-path="/ncmflac" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>NCM ⇄ MP3/FLAC</span>
+          <span class="text-xs text-slate-500 font-mono">/ncmflac</span>
+        </button>
+        <button onclick="navigate('/jpgpng')" data-path="/jpgpng" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>JPG/JPEG ⇄ PNG</span>
+          <span class="text-xs text-slate-500 font-mono">/jpgpng</span>
+        </button>
+        <button onclick="navigate('/packzip')" data-path="/packzip" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>Folder to ZIP Pack</span>
+          <span class="text-xs text-slate-500 font-mono">/packzip</span>
+        </button>
+        <button onclick="navigate('/pezzip')" data-path="/pezzip" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>PEZ/7Z ⇄ ZIP</span>
+          <span class="text-xs text-slate-500 font-mono">/pezzip</span>
+        </button>
+        <button onclick="navigate('/txthtml')" data-path="/txthtml" class="nav-btn w-full text-left px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/70 transition flex items-center justify-between">
+          <span>TXT ⇄ HTML</span>
+          <span class="text-xs text-slate-500 font-mono">/txthtml</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Tool Container -->
+    <main id="app-content" class="flex-1 bg-slate-800/40 rounded-2xl p-6 md:p-8 border border-slate-700/60 shadow-xl flex flex-col justify-center items-center">
+      <!-- Tool Views Rendered Dynamically Here -->
+    </main>
+  </div>
+
+  <footer class="text-center text-xs text-slate-500 py-4 border-t border-slate-800/80">
+    JR AI Converter Suite &copy; 2026. Fast, lightweight, and client-side enabled.
+  </footer>
+
+  <script>
+    // Templates for each route
+    const routes = {
+      '/': `
+        <div class="text-center max-w-md">
+          <div class="w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto mb-4 text-3xl">🧰</div>
+          <h2 class="text-2xl font-bold mb-2">Welcome to JR AI Toolbox</h2>
+          <p class="text-slate-400 text-sm mb-6">Select any conversion utility from the left navigation panel or directly append the path to the URL.</p>
+        </div>
+      `,
+      '/wordpdf': `
+        <div class="w-full max-w-xl">
+          <h2 class="text-2xl font-bold mb-1">Word ⇄ PDF Converter</h2>
+          <p class="text-slate-400 text-sm mb-6">Bidirectional conversion between Word (.docx) and PDF files.</p>
+          <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center transition bg-slate-900/40">
+            <input type="file" id="wordpdf-input" accept=".docx,.pdf" class="hidden" onchange="handleFileSelect('wordpdf-input', 'wordpdf-label')" />
+            <label for="wordpdf-input" class="cursor-pointer flex flex-col items-center">
+              <svg class="w-12 h-12 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <span id="wordpdf-label" class="text-slate-300 font-medium">Click or drag Word (.docx) / PDF to convert</span>
+            </label>
+          </div>
+          <div class="mt-4 flex gap-3">
+            <button onclick="mockProcess('Converting Word / PDF document...')" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition">Convert File</button>
+          </div>
+          <div id="status-box" class="mt-4 text-xs text-slate-400 text-center"></div>
+        </div>
+      `,
+      '/wavmp3': `
+        <div class="w-full max-w-xl">
+          <h2 class="text-2xl font-bold mb-1">WAV / OGG ⇄ MP3 / FLAC</h2>
+          <p class="text-slate-400 text-sm mb-6">High-fidelity cross-format audio converter.</p>
+          <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-900/40">
+            <input type="file" id="audio-input" accept=".wav,.ogg,.mp3,.flac" class="hidden" onchange="handleFileSelect('audio-input', 'audio-label')" />
+            <label for="audio-input" class="cursor-pointer flex flex-col items-center">
+              <svg class="w-12 h-12 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+              <span id="audio-label" class="text-slate-300 font-medium">Select audio file (WAV, OGG, MP3, FLAC)</span>
+            </label>
+          </div>
+          <div class="mt-4 flex gap-3">
+            <select id="audio-target" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200">
+              <option value="mp3">To MP3</option>
+              <option value="flac">To FLAC</option>
+              <option value="wav">To WAV</option>
+              <option value="ogg">To OGG</option>
+            </select>
+            <button onclick="mockProcess('Encoding audio stream...')" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition">Start Conversion</button>
+          </div>
+          <div id="status-box" class="mt-4 text-xs text-slate-400 text-center"></div>
+        </div>
+      `,
+      '/ncmflac': `
+        <div class="w-full max-w-xl">
+          <h2 class="text-2xl font-bold mb-1">NCM ⇄ MP3 / FLAC Decryption</h2>
+          <p class="text-slate-400 text-sm mb-6">Convert encrypted NetEase Cloud Music (.ncm) files back to original lossless audio formats.</p>
+          <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-900/40">
+            <input type="file" id="ncm-input" accept=".ncm,.flac,.mp3" class="hidden" onchange="handleFileSelect('ncm-input', 'ncm-label')" />
+            <label for="ncm-input" class="cursor-pointer flex flex-col items-center">
+              <svg class="w-12 h-12 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              <span id="ncm-label" class="text-slate-300 font-medium">Select .ncm or standard audio file</span>
+            </label>
+          </div>
+          <button onclick="mockProcess('Unpacking AES-128 key and decrypting audio tags...')" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition">Decrypt & Convert</button>
+          <div id="status-box" class="mt-4 text-xs text-slate-400 text-center"></div>
+        </div>
+      `,
+      '/jpgpng': `
+        <div class="w-full max-w-xl">
+          <h2 class="text-2xl font-bold mb-1">JPG / JPEG ⇄ PNG Converter</h2>
+          <p class="text-slate-400 text-sm mb-6">Instant, client-side lossless canvas image format conversion.</p>
+          <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-900/40">
+            <input type="file" id="img-input" accept="image/jpeg,image/png" class="hidden" onchange="convertImage(this)" />
+            <label for="img-input" class="cursor-pointer flex flex-col items-center">
+              <svg class="w-12 h-12 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span id="img-label" class="text-slate-300 font-medium">Upload JPG or PNG for direct in-browser conversion</span>
+            </label>
+          </div>
+          <div id="img-result" class="mt-4 flex flex-col items-center gap-3 hidden">
+            <canvas id="img-canvas" class="hidden"></canvas>
+            <a id="img-download" class="w-full text-center bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-xl transition cursor-pointer">Download Converted Image</a>
+          </div>
+        </div>
+      `,
+      '/packzip': `
+        <div class="w-full max-w-xl">
+          <h2 class="text-2xl font-bold mb-1">Folder to ZIP Packaging</h2>
+          <p class="text-slate-400 text-sm mb-6">Select an entire directory to compress and download as an archive instantly.</p>
+          <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-900/40">
+            <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" onchange="packDirectory(this)" />
+            <label for="folder-input" class="cursor-pointer flex flex-col items-center">
+              <svg class="w-12 h-12 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+              <span id="folder-label" class="text-slate-300 font-medium">Select a folder to compress</span>
+            </label>
+          </div>
+          <div id="pack-status" class="mt-4 text-xs text-slate-400 text-center"></div>
+        </div>
+      `,
+      '/pezzip': `
+        <div class="w-full max-w-xl">
+          <h2 class="text-2xl font-bold mb-1">PEZ / 7Z ⇄ ZIP Archive Converter</h2>
+          <p class="text-slate-400 text-sm mb-6">Convert PEZ or 7Z compressed archives into universal standard ZIP files and vice versa.</p>
+          <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center bg-slate-900/40">
+            <input type="file" id="pezzip-input" accept=".pez,.7z,.zip" class="hidden" onchange="handleFileSelect('pezzip-input', 'pezzip-label')" />
+            <label for="pezzip-input" class="cursor-pointer flex flex-col items-center">
+              <svg class="w-12 h-12 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+              <span id="pezzip-label" class="text-slate-300 font-medium">Select .pez, .7z, or .zip archive</span>
+            </label>
+          </div>
+          <button onclick="mockProcess('Extracting archive entries and repackaging...')" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition">Convert Archive</button>
+          <div id="status-box" class="mt-4 text-xs text-slate-400 text-center"></div>
+        </div>
+      `,
+      '/txthtml': `
+        <div class="w-full max-w-2xl">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-2xl font-bold">TXT ⇄ HTML Converter</h2>
+              <p class="text-slate-400 text-sm">Paste content or upload files for bi-directional plain text / HTML translation.</p>
+            </div>
+            <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <button id="mode-to-html" onclick="setTxtHtmlMode('to-html')" class="px-3 py-1 text-xs rounded-lg bg-blue-600 text-white font-medium transition">TXT → HTML</button>
+              <button id="mode-to-txt" onclick="setTxtHtmlMode('to-txt')" class="px-3 py-1 text-xs rounded-lg text-slate-400 hover:text-white font-medium transition">HTML → TXT</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1" id="input-heading">Input Content</label>
+              <textarea id="txthtml-in" rows="9" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Paste your text here..."></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1" id="output-heading">Converted Result</label>
+              <textarea id="txthtml-out" rows="9" readonly class="w-full bg-slate-900/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-300 focus:outline-none font-mono"></textarea>
+            </div>
+          </div>
+          <div class="mt-4 flex gap-3">
+            <button onclick="executeTxtHtmlConvert()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition">Convert Now</button>
+            <button onclick="downloadTextResult()" class="bg-slate-700 hover:bg-slate-600 text-white font-medium px-5 py-2.5 rounded-xl transition">Download File</button>
+          </div>
+        </div>
+      `
+    };
+
+    // Client-side Router Implementation
+    function navigate(pathname) {
+      window.history.pushState({}, '', pathname);
+      renderRoute(pathname);
+    }
+
+    function renderRoute(pathname) {
+      const appContent = document.getElementById('app-content');
+      const normalizedPath = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
+      
+      appContent.innerHTML = routes[normalizedPath] || routes['/'];
+
+      // Update sidebar nav state
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.getAttribute('data-path') === normalizedPath) {
+          btn.classList.add('active-nav');
+        } else {
+          btn.classList.remove('active-nav');
+        }
+      });
+    }
+
+    // Handle browser back and forward navigation
+    window.addEventListener('popstate', () => {
+      renderRoute(window.location.pathname);
+    });
+
+    // Helper: File selection feedback
+    function handleFileSelect(inputId, labelId) {
+      const input = document.getElementById(inputId);
+      const label = document.getElementById(labelId);
+      if (input.files.length > 0) {
+        label.innerText = `Selected: ${input.files[0].name}`;
+      }
+    }
+
+    function mockProcess(message) {
+      const box = document.getElementById('status-box');
+      if (!box) return;
+      box.innerText = `${message} Processing...`;
+      setTimeout(() => {
+        box.innerText = 'Completed! Ready for production endpoint connection.';
+      }, 1200);
+    }
+
+    // Function 4: JPG/PNG conversion directly in browser
+    function convertImage(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const isPng = file.type === 'image/png';
+      const targetType = isPng ? 'image/jpeg' : 'image/png';
+      const targetExt = isPng ? 'jpg' : 'png';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.getElementById('img-canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (targetType === 'image/jpeg') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+          ctx.drawImage(img, 0, 0);
+
+          const resultData = canvas.toDataURL(targetType, 0.92);
+          const dl = document.getElementById('img-download');
+          dl.href = resultData;
+          dl.download = `converted_${file.name.split('.')[0]}.${targetExt}`;
+          dl.innerText = `Download as .${targetExt.toUpperCase()}`;
+          document.getElementById('img-result').classList.remove('hidden');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Function 5: Folder packing directly to ZIP
+    async function packDirectory(input) {
+      const status = document.getElementById('pack-status');
+      if (!input.files || input.files.length === 0) return;
+      
+      status.innerText = `Archiving ${input.files.length} files...`;
+      const zip = new JSZip();
+
+      for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const relativePath = file.webkitRelativePath || file.name;
+        zip.file(relativePath, file);
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'packed_folder.zip');
+      status.innerText = 'Done! Your folder was packed and downloaded as a ZIP file.';
+    }
+
+    // Function 7: TXT ⇄ HTML converter logic
+    let txtHtmlMode = 'to-html';
+    function setTxtHtmlMode(mode) {
+      txtHtmlMode = mode;
+      document.getElementById('mode-to-html').className = mode === 'to-html' ? 'px-3 py-1 text-xs rounded-lg bg-blue-600 text-white font-medium transition' : 'px-3 py-1 text-xs rounded-lg text-slate-400 hover:text-white font-medium transition';
+      document.getElementById('mode-to-txt').className = mode === 'to-txt' ? 'px-3 py-1 text-xs rounded-lg bg-blue-600 text-white font-medium transition' : 'px-3 py-1 text-xs rounded-lg text-slate-400 hover:text-white font-medium transition';
+      document.getElementById('input-heading').innerText = mode === 'to-html' ? 'Plain Text Input' : 'HTML Code Input';
+      document.getElementById('output-heading').innerText = mode === 'to-html' ? 'HTML Output' : 'Plain Text Output';
+    }
+
+    function executeTxtHtmlConvert() {
+      const input = document.getElementById('txthtml-in').value;
+      const output = document.getElementById('txthtml-out');
+      if (txtHtmlMode === 'to-html') {
+        const paragraphs = input.split('\n\n').map(p => `  <p>${p.replace(/\n/g, '<br/>')}</p>`).join('\n');
+        output.value = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>Converted Document</title>\n</head>\n<body>\n${paragraphs}\n</body>\n</html>`;
+      } else {
+        const temp = document.createElement('div');
+        temp.innerHTML = input;
+        output.value = temp.innerText || temp.textContent || '';
+      }
+    }
+
+    function downloadTextResult() {
+      const content = document.getElementById('txthtml-out').value;
+      if (!content) return;
+      const ext = txtHtmlMode === 'to-html' ? 'html' : 'txt';
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      saveAs(blob, `converted_document.${ext}`);
+    }
+
+    // Initial page load routing
+    window.addEventListener('DOMContentLoaded', () => {
+      renderRoute(window.location.pathname);
+    });
+  </script>
+</body>
+</html>
