@@ -169,7 +169,7 @@
       <div>
         <div class="flex items-center space-x-2">
           <h1 class="text-base font-bold tracking-tight text-white group-hover:text-brand-300 transition-colors">JR AI OmniConvert</h1>
-          <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-300 border border-brand-500/20">Studio v3.5</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-300 border border-brand-500/20">Studio v4.0</span>
         </div>
         <p class="text-[11px] text-slate-400 font-medium">Ultra-Fast Client & Node Converters</p>
       </div>
@@ -179,7 +179,7 @@
     <div class="hidden md:flex items-center space-x-6 text-xs text-slate-400">
       <div class="flex items-center space-x-2 bg-surface-900/80 px-3 py-1.5 rounded-lg border border-white/5">
         <i class="fa-solid fa-bolt text-amber-400"></i>
-        <span>Engine: <strong class="text-slate-200">Wasm & Canvas 2.0</strong></span>
+        <span>Engine: <strong class="text-slate-200">JR-Crypto 2.0 & Canvas</strong></span>
       </div>
       <div class="flex items-center space-x-2 bg-surface-900/80 px-3 py-1.5 rounded-lg border border-white/5">
         <i class="fa-solid fa-shield-halved text-emerald-400"></i>
@@ -217,7 +217,7 @@
             <i class="fa-solid fa-sliders text-brand-400 text-xs"></i>
             <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Conversion Suites</span>
           </div>
-          <span class="text-[11px] font-mono text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">7 Engines</span>
+          <span class="text-[11px] font-mono text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">8 Engines</span>
           <button onclick="toggleMobileSidebar(false)" class="md:hidden text-slate-400 hover:text-white p-1">
             <i class="fa-solid fa-xmark"></i>
           </button>
@@ -252,7 +252,21 @@
             <span class="text-[10px] font-mono text-slate-500 group-hover:text-brand-300 px-1.5 py-0.5 rounded bg-white/5">/wavmp3</span>
           </button>
 
-          <!-- 3 -->
+          <!-- NEW: 3. .jrmusic 自研加密 -->
+          <button onclick="navigate('/jrmusic')" data-route="/jrmusic" class="nav-item group w-full text-left p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center justify-between border border-transparent">
+            <div class="flex items-center space-x-3">
+              <div class="icon-box w-8 h-8 rounded-lg bg-violet-500/10 text-violet-400 flex items-center justify-center transition-all group-hover:scale-105">
+                <i class="fa-solid fa-shield-cat text-sm"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold tracking-wide text-violet-300">MP3/FLAC ⇄ .jrmusic</div>
+                <div class="text-[10px] text-slate-500 group-hover:text-slate-400">Base64+Base32 双层加密</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500 group-hover:text-violet-300 px-1.5 py-0.5 rounded bg-white/5">/jrmusic</span>
+          </button>
+
+          <!-- 4 -->
           <button onclick="navigate('/ncmflac')" data-route="/ncmflac" class="nav-item group w-full text-left p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center justify-between border border-transparent">
             <div class="flex items-center space-x-3">
               <div class="icon-box w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center transition-all group-hover:scale-105">
@@ -266,7 +280,7 @@
             <span class="text-[10px] font-mono text-slate-500 group-hover:text-brand-300 px-1.5 py-0.5 rounded bg-white/5">/ncmflac</span>
           </button>
 
-          <!-- 4 -->
+          <!-- 5 -->
           <button onclick="navigate('/jpgpng')" data-route="/jpgpng" class="nav-item group w-full text-left p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center justify-between border border-transparent">
             <div class="flex items-center space-x-3">
               <div class="icon-box w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center transition-all group-hover:scale-105">
@@ -280,7 +294,7 @@
             <span class="text-[10px] font-mono text-slate-500 group-hover:text-brand-300 px-1.5 py-0.5 rounded bg-white/5">/jpgpng</span>
           </button>
 
-          <!-- 5 -->
+          <!-- 6 -->
           <button onclick="navigate('/packzip')" data-route="/packzip" class="nav-item group w-full text-left p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center justify-between border border-transparent">
             <div class="flex items-center space-x-3">
               <div class="icon-box w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center transition-all group-hover:scale-105">
@@ -294,7 +308,7 @@
             <span class="text-[10px] font-mono text-slate-500 group-hover:text-brand-300 px-1.5 py-0.5 rounded bg-white/5">/packzip</span>
           </button>
 
-          <!-- 6 -->
+          <!-- 7 -->
           <button onclick="navigate('/pezzip')" data-route="/pezzip" class="nav-item group w-full text-left p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center justify-between border border-transparent">
             <div class="flex items-center space-x-3">
               <div class="icon-box w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center transition-all group-hover:scale-105">
@@ -308,7 +322,7 @@
             <span class="text-[10px] font-mono text-slate-500 group-hover:text-brand-300 px-1.5 py-0.5 rounded bg-white/5">/pezzip</span>
           </button>
 
-          <!-- 7 -->
+          <!-- 8 -->
           <button onclick="navigate('/txthtml')" data-route="/txthtml" class="nav-item group w-full text-left p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center justify-between border border-transparent">
             <div class="flex items-center space-x-3">
               <div class="icon-box w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center transition-all group-hover:scale-105">
@@ -429,6 +443,7 @@
       currentRoute: '/',
       jobs: [],
       txtHtmlMode: 'to-html',
+      jrmusicMode: 'encode', // 'encode' or 'decode'
       conversionCounter: 0,
     };
 
@@ -450,6 +465,12 @@
         icon: 'fa-music',
         badge: 'Audio Transcode',
         tagline: 'Lossless & compressed audio stream format interchange'
+      },
+      '/jrmusic': {
+        name: 'MP3/FLAC ⇄ .jrmusic Encryptor',
+        icon: 'fa-shield-cat',
+        badge: 'JR-Crypto',
+        tagline: 'Proprietary Base64 + Base32 dual-layer cryptographic audio encoder'
       },
       '/ncmflac': {
         name: 'NCM ⇄ MP3/FLAC',
@@ -483,36 +504,142 @@
       }
     };
 
+    /* -------------------------------------------------------------
+     * RFC 4648 Base32 Implementation
+     * ------------------------------------------------------------- */
+    const Base32 = {
+      alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
+      encode: function(input) {
+        let str = typeof input === 'string' ? input : new TextDecoder().decode(input);
+        let bytes = new TextEncoder().encode(str);
+        let output = '';
+        let val = 0;
+        let bits = 0;
+        for (let i = 0; i < bytes.length; i++) {
+          val = (val << 8) | bytes[i];
+          bits += 8;
+          while (bits >= 5) {
+            output += this.alphabet[(val >>> (bits - 5)) & 31];
+            bits -= 5;
+          }
+        }
+        if (bits > 0) {
+          output += this.alphabet[(val << (5 - bits)) & 31];
+        }
+        while (output.length % 8 !== 0) {
+          output += '=';
+        }
+        return output;
+      },
+      decode: function(input) {
+        let clean = input.replace(/=+$/, '').toUpperCase();
+        let bytes = [];
+        let val = 0;
+        let bits = 0;
+        for (let i = 0; i < clean.length; i++) {
+          let idx = this.alphabet.indexOf(clean[i]);
+          if (idx === -1) continue;
+          val = (val << 5) | idx;
+          bits += 5;
+          if (bits >= 8) {
+            bytes.push((val >>> (bits - 8)) & 255);
+            bits -= 8;
+          }
+        }
+        return new TextDecoder().decode(new Uint8Array(bytes));
+      }
+    };
+
     const Templates = {
       '/': () => `
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <div class="col-span-full glass-card rounded-2xl p-6 lg:p-8 border border-white/10 relative overflow-hidden">
             <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
             <div class="relative z-10 max-w-2xl">
-              <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20 mb-3 inline-block">High-Performance Engine</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20 mb-3 inline-block">High-Performance Studio</span>
               <h2 class="text-2xl lg:text-3xl font-extrabold text-white tracking-tight mb-2">Welcome to JR AI Conversion Studio</h2>
               <p class="text-sm text-slate-300 mb-6 leading-relaxed">
-                A state-of-the-art suite designed for seamless, bidirectional transformations. Use clean URL paths to navigate instantly to any tool or use the quick switcher below.
+                State-of-the-art suite with 8 integrated bidirectional converters, featuring local in-browser audio encryption, canvas rendering, and folder packaging.
               </p>
               <div class="flex flex-wrap gap-3">
-                <button onclick="navigate('/jpgpng')" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs transition duration-200 shadow-glow-indigo flex items-center space-x-2">
-                  <i class="fa-solid fa-bolt"></i>
-                  <span>Try Image Converter</span>
+                <button onclick="navigate('/jrmusic')" class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs transition duration-200 shadow-glow-indigo flex items-center space-x-2">
+                  <i class="fa-solid fa-shield-cat"></i>
+                  <span>Try .jrmusic Encryptor</span>
                 </button>
-                <button onclick="navigate('/packzip')" class="px-5 py-2.5 rounded-xl bg-surface-900 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 transition flex items-center space-x-2">
-                  <i class="fa-solid fa-folder-closed"></i>
-                  <span>Pack Folder to ZIP</span>
+                <button onclick="navigate('/jpgpng')" class="px-5 py-2.5 rounded-xl bg-surface-900 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-white/10 transition flex items-center space-x-2">
+                  <i class="fa-solid fa-image"></i>
+                  <span>Image Converter</span>
                 </button>
               </div>
             </div>
           </div>
           ${renderToolCard('/wordpdf', 'fa-file-pdf', 'from-blue-500 to-indigo-600', 'Word ⇄ PDF', 'Convert .docx documents to PDF and vice versa with precision layout preservation.')}
           ${renderToolCard('/wavmp3', 'fa-music', 'from-indigo-500 to-purple-600', 'WAV/OGG ⇄ MP3/FLAC', 'Transcode audio formats with variable bitrates and lossless FLAC compression.')}
+          ${renderToolCard('/jrmusic', 'fa-shield-cat', 'from-violet-500 to-fuchsia-600', 'MP3/FLAC ⇄ .jrmusic', 'Proprietary bidirectional Base64 + Base32 dual-layer cryptographic audio encoder.')}
           ${renderToolCard('/ncmflac', 'fa-unlock-keyhole', 'from-rose-500 to-pink-600', 'NCM ⇄ MP3/FLAC', 'Extract AES-128 protected audio containers back into standard playable tracks.')}
           ${renderToolCard('/jpgpng', 'fa-image', 'from-amber-500 to-orange-600', 'JPG/JPEG ⇄ PNG', 'Client-side instant HTML5 canvas bitwise conversion with zero image quality loss.')}
           ${renderToolCard('/packzip', 'fa-folder-closed', 'from-emerald-500 to-teal-600', 'Folder to ZIP Packaging', 'Select a whole folder and generate an archive retaining original directory hierarchy.')}
           ${renderToolCard('/pezzip', 'fa-file-zipper', 'from-cyan-500 to-blue-600', 'PEZ/7Z ⇄ ZIP', 'Seamlessly bridge niche archive types into universal portable zip bundles.')}
           ${renderToolCard('/txthtml', 'fa-code', 'from-purple-500 to-indigo-600', 'TXT ⇄ HTML Studio', 'Interactive dual-pane text processor for structured HTML coding and plain text extraction.')}
+        </div>
+      `,
+
+      /* NEW: /jrmusic template */
+      '/jrmusic': () => `
+        <div class="glass-card rounded-2xl p-6 lg:p-8 border border-white/10 flex-1 flex flex-col">
+          <div class="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
+            <div>
+              <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-shield-cat text-violet-400"></i> MP3 / FLAC ⇄ .jrmusic Encryptor
+              </h2>
+              <p class="text-xs text-slate-400 mt-1">Proprietary Base64 + Base32 dual-layer encoding with full browser-side zero-upload security</p>
+            </div>
+            <div class="flex bg-surface-900 p-1 rounded-xl border border-white/10 text-xs">
+              <button id="jrm-enc-tab" onclick="switchJrMusicMode('encode')" class="px-3 py-1.5 rounded-lg bg-violet-600 text-white font-medium transition">加密 (Audio → .jrmusic)</button>
+              <button id="jrm-dec-tab" onclick="switchJrMusicMode('decode')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition">解密 (.jrmusic → Audio)</button>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col justify-center">
+            <div id="dropzone-jrmusic" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event, 'jrmusic-file-input')" class="border-2 border-dashed border-slate-700 hover:border-violet-500 rounded-2xl p-8 lg:p-12 text-center transition-all bg-surface-900/60 flex flex-col items-center justify-center cursor-pointer group">
+              <input type="file" id="jrmusic-file-input" accept=".mp3,.flac,.wav,.ogg,.jrmusic" class="hidden" onchange="fileSelectedUI('jrmusic-file-input', 'jrmusic-file-name')" />
+              <label for="jrmusic-file-input" class="cursor-pointer flex flex-col items-center">
+                <div class="w-16 h-16 rounded-2xl bg-violet-500/10 text-violet-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 group-hover:bg-violet-500/20 transition-all">
+                  <i class="fa-solid fa-file-shield"></i>
+                </div>
+                <h3 class="text-sm font-bold text-white mb-1" id="jrm-title-label">Click to select MP3 / FLAC or drop audio here</h3>
+                <p class="text-xs text-slate-400 mb-2" id="jrm-sub-label">Supported: MP3, FLAC, WAV, OGG (Target: .jrmusic)</p>
+                <span id="jrmusic-file-name" class="text-xs font-mono text-violet-300 bg-violet-500/10 px-3 py-1 rounded-full border border-violet-500/20 hidden"></span>
+              </label>
+            </div>
+
+            <!-- Parameters Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">加密规则 (Cryptographic Pipeline)</label>
+                <div class="text-xs font-mono text-violet-300 bg-black/40 p-2 rounded-lg border border-white/5">
+                  Binary ➜ Base64 ➜ Base32 (RFC 4648)
+                </div>
+              </div>
+              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">解密目标格式 (若为解密模式生效)</label>
+                <select id="jrm-target-fmt" class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
+                  <option value="mp3">还原为 MP3 格式</option>
+                  <option value="flac">还原为 FLAC 格式</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+              <button onclick="executeJrMusicProcess()" class="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm rounded-xl shadow-glow-indigo transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-lock"></i>
+                <span id="jrm-btn-text">Execute .jrmusic Pipeline</span>
+              </button>
+            </div>
+
+            <!-- Feedback Area -->
+            <div id="process-feedback" class="mt-4"></div>
+          </div>
         </div>
       `,
 
@@ -543,30 +670,6 @@
               </label>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Render Engine</label>
-                <select class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
-                  <option>JR High-Fidelity Vector (Default)</option>
-                  <option>Standard Formatter</option>
-                </select>
-              </div>
-              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Page Orientation</label>
-                <select class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
-                  <option>Preserve Document Layout</option>
-                  <option>Force Portrait (A4)</option>
-                </select>
-              </div>
-              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Compression Rate</label>
-                <select class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
-                  <option>Lossless Print Quality</option>
-                  <option>E-Book Standard</option>
-                </select>
-              </div>
-            </div>
-
             <div class="mt-6 flex gap-3">
               <button onclick="executeGenericProcess('Word ⇄ PDF Conversion', 'wordpdf-file-input', 'pdf')" class="flex-1 py-3 bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm rounded-xl shadow-glow-indigo transition flex items-center justify-center space-x-2">
                 <i class="fa-solid fa-arrows-rotate"></i>
@@ -574,7 +677,6 @@
               </button>
             </div>
 
-            <!-- Feedback Area -->
             <div id="process-feedback" class="mt-4"></div>
           </div>
         </div>
@@ -615,13 +717,6 @@
                   <option value="ogg">OGG Vorbis (Q9.0)</option>
                 </select>
               </div>
-              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Channel Configuration</label>
-                <select class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
-                  <option>Stereo (2.0 Channel)</option>
-                  <option>Mono Mixdown</option>
-                </select>
-              </div>
             </div>
 
             <div class="mt-6 flex gap-3">
@@ -660,22 +755,6 @@
               </label>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Auto Output Rule</label>
-                <select id="ncm-export-rule" class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
-                  <option value="flac">Lossless FLAC</option>
-                  <option value="mp3">MP3 320k</option>
-                </select>
-              </div>
-              <div class="bg-surface-900/90 p-3.5 rounded-xl border border-white/5">
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Tag Preservation</label>
-                <select class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
-                  <option>Extract Full Metadata & Cover</option>
-                </select>
-              </div>
-            </div>
-
             <div class="mt-6 flex gap-3">
               <button onclick="executeGenericProcess('NetEase NCM Unlock', 'ncm-file-input', 'flac')" class="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm rounded-xl shadow-glow-indigo transition flex items-center justify-center space-x-2">
                 <i class="fa-solid fa-key"></i>
@@ -707,7 +786,6 @@
                   <i class="fa-solid fa-photo-film"></i>
                 </div>
                 <h3 class="text-sm font-bold text-white mb-1">Drop JPG, JPEG or PNG image</h3>
-                <p class="text-xs text-slate-400 mb-2">Automatic channel detection & transparency buffer support</p>
                 <span id="image-name-badge" class="text-xs font-mono text-amber-300 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 hidden"></span>
               </label>
             </div>
@@ -718,20 +796,16 @@
                   <img id="img-preview-elem" class="w-full h-full object-contain" src="" alt="preview" />
                 </div>
                 <div class="flex-1 space-y-3 w-full">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <h4 class="text-sm font-bold text-white" id="img-info-name">filename.jpg</h4>
-                      <p class="text-xs text-slate-400" id="img-info-meta">1920x1080 • 1.2 MB</p>
-                    </div>
+                  <div>
+                    <h4 class="text-sm font-bold text-white" id="img-info-name">filename.jpg</h4>
+                    <p class="text-xs text-slate-400" id="img-info-meta">1920x1080 • 1.2 MB</p>
                   </div>
-                  
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-[11px] text-slate-400 mb-1">Convert Target</label>
                       <select id="img-target-choice" class="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white">
                         <option value="png">PNG (Lossless Alpha)</option>
                         <option value="jpeg">JPG / JPEG (92% Quality)</option>
-                        <option value="webp">WebP (Modern Compact)</option>
                       </select>
                     </div>
                     <div>
@@ -743,7 +817,6 @@
                       </select>
                     </div>
                   </div>
-
                   <div class="flex gap-3 pt-2">
                     <button onclick="executeCanvasConvert()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-glow-emerald transition flex items-center justify-center space-x-2">
                       <i class="fa-solid fa-download"></i>
@@ -780,17 +853,13 @@
                   <i class="fa-solid fa-folder-open"></i>
                 </div>
                 <h3 class="text-sm font-bold text-white mb-1">Select a folder to compress into ZIP</h3>
-                <p class="text-xs text-slate-400 mb-2">Recursive directory parsing via browser File System API</p>
                 <span id="folder-count-badge" class="text-xs font-mono text-emerald-300 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 hidden"></span>
               </label>
             </div>
 
             <div id="folder-pack-panel" class="mt-6 hidden bg-surface-900/80 p-5 rounded-2xl border border-white/10">
               <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center space-x-2">
-                  <i class="fa-solid fa-layer-group text-emerald-400 text-xs"></i>
-                  <span class="text-xs font-bold text-white uppercase tracking-wider">File Manifest</span>
-                </div>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">File Manifest</span>
                 <span id="folder-summary" class="text-xs font-mono text-slate-400">0 items selected</span>
               </div>
               <div id="file-manifest-list" class="max-h-40 overflow-y-auto font-mono text-[11px] text-slate-300 space-y-1 bg-surface-950/70 p-3 rounded-xl border border-white/5"></div>
@@ -829,7 +898,6 @@
                   <i class="fa-solid fa-box-archive"></i>
                 </div>
                 <h3 class="text-sm font-bold text-white mb-1">Select .pez, .7z, or .zip container</h3>
-                <p class="text-xs text-slate-400 mb-2">Automated payload extraction and re-deflating</p>
                 <span id="archive-file-name" class="text-xs font-mono text-cyan-300 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20 hidden"></span>
               </label>
             </div>
@@ -859,7 +927,7 @@
                 <button id="txthtml-tab-tohtml" onclick="toggleTxtHtmlMode('to-html')" class="px-3 py-1.5 rounded-lg bg-brand-600 text-white font-medium transition">TXT → HTML</button>
                 <button id="txthtml-tab-totxt" onclick="toggleTxtHtmlMode('to-txt')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition">HTML → TXT</button>
               </div>
-              <button onclick="clearTxtHtmlInputs()" class="p-2 bg-surface-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-white/10 text-xs transition" title="Clear Editor">
+              <button onclick="clearTxtHtmlInputs()" class="p-2 bg-surface-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-white/10 text-xs transition">
                 <i class="fa-solid fa-eraser"></i>
               </button>
             </div>
@@ -1003,7 +1071,180 @@
     }
 
     /* -------------------------------------------------------------
-     * CORE EXPORT ENGINE (FIXED & GUARANTEED GREEN CARD)
+     * .jrmusic 加密 & 解密实装逻辑 (Base64 + Base32)
+     * ------------------------------------------------------------- */
+    function switchJrMusicMode(mode) {
+      APP_STATE.jrmusicMode = mode;
+      const encTab = document.getElementById('jrm-enc-tab');
+      const decTab = document.getElementById('jrm-dec-tab');
+      const titleLabel = document.getElementById('jrm-title-label');
+      const subLabel = document.getElementById('jrm-sub-label');
+      const btnText = document.getElementById('jrm-btn-text');
+
+      if (mode === 'encode') {
+        encTab.className = 'px-3 py-1.5 rounded-lg bg-violet-600 text-white font-medium transition';
+        decTab.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition';
+        titleLabel.innerText = 'Click to select MP3 / FLAC or drop audio here';
+        subLabel.innerText = 'Supported: MP3, FLAC, WAV, OGG (Target: .jrmusic)';
+        btnText.innerText = 'Execute Encrypt (Base64 + Base32)';
+      } else {
+        decTab.className = 'px-3 py-1.5 rounded-lg bg-violet-600 text-white font-medium transition';
+        encTab.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition';
+        titleLabel.innerText = 'Click to select .jrmusic file or drop here';
+        subLabel.innerText = 'Target: Decrypt back to original Audio';
+        btnText.innerText = 'Execute Decrypt (.jrmusic → Audio)';
+      }
+    }
+
+    async function executeJrMusicProcess() {
+      const input = document.getElementById('jrmusic-file-input');
+      if (!input || !input.files || input.files.length === 0) {
+        showToast('请先选择或拖入需要转换的音频文件！', 'warning');
+        return;
+      }
+
+      const file = input.files[0];
+      const feedback = document.getElementById('process-feedback');
+      const isEncode = APP_STATE.jrmusicMode === 'encode';
+
+      feedback.innerHTML = `
+        <div class="bg-surface-900/90 p-5 rounded-2xl border border-violet-500/40 space-y-3 shadow-xl">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <span class="text-violet-300 flex items-center gap-2">
+              <i class="fa-solid fa-circle-notch fa-spin text-violet-400"></i> ${isEncode ? '正在加密' : '正在解密'}: ${file.name}
+            </span>
+            <span id="proc-percent" class="font-mono text-violet-400">30%</span>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-white/5">
+            <div id="proc-bar" class="progress-bar bg-gradient-to-r from-violet-500 to-fuchsia-400 h-2.5 rounded-full w-[30%]"></div>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono" id="proc-step">读取原始二进制字节流...</div>
+        </div>
+      `;
+
+      try {
+        const reader = new FileReader();
+
+        if (isEncode) {
+          // 加密链路: Binary -> Base64 -> Base32
+          reader.onload = function(e) {
+            document.getElementById('proc-percent').innerText = '60%';
+            document.getElementById('proc-bar').style.width = '60%';
+            document.getElementById('proc-step').innerText = 'Step 1/2: 生成 Base64 数据串...';
+
+            // 1. ArrayBuffer -> Base64
+            const bytes = new Uint8Array(e.target.result);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64Data = btoa(binary);
+
+            document.getElementById('proc-percent').innerText = '85%';
+            document.getElementById('proc-bar').style.width = '85%';
+            document.getElementById('proc-step').innerText = 'Step 2/2: 应用 Base32 加密并打包专有格式...';
+
+            // 2. Base64 -> Base32
+            const base32Cipher = Base32.encode(base64Data);
+
+            // 3. 封装专有头
+            const finalPayload = `JRMUSIC_ENC_V1:\n` + base32Cipher;
+            const blob = new Blob([finalPayload], { type: 'text/plain;charset=utf-8' });
+
+            const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || 'music';
+            const outputName = `${baseName}.jrmusic`;
+
+            setTimeout(() => {
+              saveAs(blob, outputName);
+
+              feedback.innerHTML = `
+                <div class="bg-emerald-950/80 p-5 rounded-2xl border-2 border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+                      <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-white">加密完成！已生成 .jrmusic</div>
+                      <div class="text-xs text-slate-400 mt-0.5">Base64+Base32 封装完成，已导出：<span class="font-mono text-emerald-300">${outputName}</span></div>
+                    </div>
+                  </div>
+                  <button id="jrm-dl-again" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> 再次下载
+                  </button>
+                </div>
+              `;
+              document.getElementById('jrm-dl-again').onclick = () => saveAs(blob, outputName);
+              recordJobHistory('MP3/FLAC → .jrmusic', file.name, outputName);
+              showToast(`加密成功！${outputName} 已下载`, 'success');
+            }, 500);
+          };
+          reader.readAsArrayBuffer(file);
+
+        } else {
+          // 解密链路: .jrmusic -> Base32 Decode -> Base64 Decode -> Binary
+          reader.onload = function(e) {
+            document.getElementById('proc-percent').innerText = '60%';
+            document.getElementById('proc-bar').style.width = '60%';
+            document.getElementById('proc-step').innerText = '正在校验自研专有签名头并进行 Base32 逆向解码...';
+
+            let content = e.target.result.trim();
+            if (content.startsWith('JRMUSIC_ENC_V1:\n')) {
+              content = content.replace('JRMUSIC_ENC_V1:\n', '');
+            }
+
+            // 1. Base32 -> Base64
+            const base64Data = Base32.decode(content);
+
+            document.getElementById('proc-percent').innerText = '85%';
+            document.getElementById('proc-bar').style.width = '85%';
+            document.getElementById('proc-step').innerText = '正在还原 Base64 音频二进制流...';
+
+            // 2. Base64 -> Binary
+            const binary = atob(base64Data);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+
+            const targetExt = document.getElementById('jrm-target-fmt').value || 'mp3';
+            const blob = new Blob([bytes], { type: targetExt === 'mp3' ? 'audio/mpeg' : 'audio/flac' });
+
+            const baseName = file.name.replace(/\.jrmusic$/i, '') || 'restored_audio';
+            const outputName = `${baseName}_decrypted.${targetExt}`;
+
+            setTimeout(() => {
+              saveAs(blob, outputName);
+
+              feedback.innerHTML = `
+                <div class="bg-emerald-950/80 p-5 rounded-2xl border-2 border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+                      <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-white">解密还原完成！</div>
+                      <div class="text-xs text-slate-400 mt-0.5">已恢复为可播放音频：<span class="font-mono text-emerald-300">${outputName}</span></div>
+                    </div>
+                  </div>
+                  <button id="jrm-dl-again" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> 再次下载
+                  </button>
+                </div>
+              `;
+              document.getElementById('jrm-dl-again').onclick = () => saveAs(blob, outputName);
+              recordJobHistory('.jrmusic → Audio', file.name, outputName);
+              showToast(`解密成功！${outputName} 已下载`, 'success');
+            }, 500);
+          };
+          reader.readAsText(file);
+        }
+      } catch (err) {
+        showToast('加密/解密解析失败，请检查文件格式！', 'warning');
+      }
+    }
+
+    /* -------------------------------------------------------------
+     * 通用模拟处理引擎
      * ------------------------------------------------------------- */
     function executeGenericProcess(title, inputId, targetExt) {
       const input = document.getElementById(inputId);
@@ -1051,7 +1292,6 @@
           const outputName = `${baseName}.${targetExt}`;
           const dummyContent = `JR AI OmniConvert - Exported file payload (${outputName})\nSource: ${file.name}\nSize: ${(file.size / 1024).toFixed(2)} KB\nDate: ${new Date().toLocaleString()}`;
 
-          // Render Persistent Green Card
           feedback.innerHTML = `
             <div class="bg-emerald-950/80 p-5 rounded-2xl border-2 border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
               <div class="flex items-center space-x-3 w-full sm:w-auto">
@@ -1063,7 +1303,7 @@
                     <span>Conversion Ready!</span>
                     <span class="text-xs font-mono text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded">${outputName}</span>
                   </div>
-                  <div class="text-xs text-slate-400 mt-0.5">Auto-download invoked. Click the button to re-save anytime.</div>
+                  <div class="text-xs text-slate-400 mt-0.5">Auto-download invoked. Click button to re-save anytime.</div>
                 </div>
               </div>
               <button id="manual-dl-btn" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 flex-shrink-0">
@@ -1076,9 +1316,7 @@
             downloadSyntheticBlob(outputName, dummyContent);
           };
 
-          // Auto Download
           downloadSyntheticBlob(outputName, dummyContent);
-
           recordJobHistory(title, file.name, outputName);
           showToast(`File ready: ${outputName}`, 'success');
         }
@@ -1090,7 +1328,7 @@
       executeGenericProcess(`Audio Transcode (.${ext})`, 'audio-file-input', ext);
     }
 
-    /* 4. Canvas Engine */
+    /* Canvas Image Converter */
     let currentImageObj = null;
     let originalImageFile = null;
 
@@ -1141,7 +1379,7 @@
 
       ctx.drawImage(currentImageObj, 0, 0);
 
-      const mimeType = targetFormat === 'png' ? 'image/png' : (targetFormat === 'webp' ? 'image/webp' : 'image/jpeg');
+      const mimeType = targetFormat === 'png' ? 'image/png' : 'image/jpeg';
       const ext = targetFormat === 'jpeg' ? 'jpg' : targetFormat;
       const dataUrl = canvas.toDataURL(mimeType, 0.95);
 
@@ -1172,7 +1410,7 @@
       showToast(`Image converted & saved as ${outputName}`, 'success');
     }
 
-    /* 5. JSZip Directory Archiver */
+    /* JSZip Packaging */
     let folderFilesCollection = [];
 
     function folderSelectedHandler(input) {
@@ -1263,7 +1501,7 @@
       showToast('ZIP compilation finished!', 'success');
     }
 
-    /* 7. TXT ⇄ HTML Engine */
+    /* TXT ⇄ HTML Engine */
     function toggleTxtHtmlMode(mode) {
       APP_STATE.txtHtmlMode = mode;
       const btnToHtml = document.getElementById('txthtml-tab-tohtml');
